@@ -36,6 +36,16 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Claude Code worktrees (nested git checkouts for background sessions)
+.claude/worktrees/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local Academia discovery output (masked, but may contain course/faculty names)
+scripts/discovery-report.txt
+scripts/.session.json
+scripts/inspect-report.txt
+scripts/structure-report.txt
+scripts/day-order-report.txt

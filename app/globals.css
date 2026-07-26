@@ -1,26 +1,258 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ---------------------------------------------------------------------------
+   THEMING CONTRACT
+
+   Two independent axes, both set as data-attributes on <html>:
+
+     data-mode  = light | dark      → surfaces, text, glass tint, shadows
+     data-theme = slate | ocean | … → hue family: gradient field + accent
+
+   Components only ever reference the semantic tokens below (accent, success,
+   warn, danger, muted…), never a literal hue. That is what makes swapping
+   themes actually work instead of leaving stray purple behind.
+--------------------------------------------------------------------------- */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-line: var(--line);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ---------- MODE: dark ---------- */
+[data-mode="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0d12;
+  --fg: #eef0f6;
+  --muted: #9aa1b4;
+  --faint: #7f8799;
+  --line: rgb(255 255 255 / 0.10);
+
+  --glass-bg: rgb(255 255 255 / 0.055);
+  --glass-bg-strong: rgb(255 255 255 / 0.095);
+  --glass-border: rgb(255 255 255 / 0.13);
+  --glass-highlight: rgb(255 255 255 / 0.20);
+  --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.45);
+  --glass-hover: rgb(255 255 255 / 0.04);
+
+  --field-opacity: 1;
+  --grain-opacity: 0.035;
+
+  --success: #4ade80;
+  --warn: #fbbf24;
+  --danger: #fb7185;
+
+  /* Soft (low-opacity) variants for status pills, mirroring --accent-soft. */
+  --success-soft: rgb(74 222 128 / 0.15);
+  --warn-soft: rgb(251 191 36 / 0.15);
+  --danger-soft: rgb(251 113 133 / 0.15);
+}
+
+/* ---------- MODE: light ---------- */
+[data-mode="light"] {
+  color-scheme: light;
+
+  --bg: #eef0f6;
+  --fg: #14172a;
+  --muted: #565d78;
+  --faint: #656c82;
+  --line: rgb(20 23 42 / 0.10);
+
+  /* Light glass leans on white fill + a lifted shadow rather than a tint. */
+  --glass-bg: rgb(255 255 255 / 0.55);
+  --glass-bg-strong: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.85);
+  --glass-highlight: rgb(255 255 255 / 0.95);
+  --glass-shadow: 0 8px 28px rgb(20 23 42 / 0.10);
+  --glass-hover: rgb(255 255 255 / 0.45);
+
+  --field-opacity: 0.55;
+  --grain-opacity: 0.02;
+
+  /* Darkened from the usual emerald/amber so small text clears WCAG AA
+     (4.5:1) against the light surface, not just large text. */
+  --success: #04674a;
+  --warn: #96450a;
+  --danger: #be123c;
+
+  /* Soft (low-opacity) variants for status pills, mirroring --accent-soft. */
+  --success-soft: rgb(4 103 74 / 0.12);
+  --warn-soft: rgb(150 69 10 / 0.12);
+  --danger-soft: rgb(190 18 60 / 0.12);
+}
+
+/* ---------- THEMES: hue families ----------
+   --t1/--t2/--t3 are the gradient field blobs; --accent is the interactive
+   colour. Each theme supplies a dark and a light variant of the accent so
+   contrast holds against both surface sets. */
+
+[data-theme="slate"] {
+  --t1: 99 116 154;
+  --t2: 71 85 120;
+  --t3: 120 134 168;
+  --accent: #6b83b5;
+  --accent-soft: rgb(107 131 181 / 0.15);
+}
+[data-mode="light"][data-theme="slate"] {
+  --accent: #3b5486;
+  --accent-soft: rgb(59 84 134 / 0.12);
+}
+
+[data-theme="ocean"] {
+  --t1: 20 130 150;
+  --t2: 14 90 130;
+  --t3: 40 160 160;
+  --accent: #2dd4bf;
+  --accent-soft: rgb(45 212 191 / 0.15);
+}
+[data-mode="light"][data-theme="ocean"] {
+  --accent: #0d7a70;
+  --accent-soft: rgb(13 122 112 / 0.12);
+}
+
+[data-theme="forest"] {
+  --t1: 52 120 80;
+  --t2: 30 90 70;
+  --t3: 90 140 70;
+  --accent: #5cbf7a;
+  --accent-soft: rgb(92 191 122 / 0.15);
+}
+[data-mode="light"][data-theme="forest"] {
+  --accent: #256b41;
+  --accent-soft: rgb(37 107 65 / 0.12);
+}
+
+[data-theme="sunset"] {
+  --t1: 190 100 50;
+  --t2: 160 60 60;
+  --t3: 200 140 60;
+  --accent: #f0964a;
+  --accent-soft: rgb(240 150 74 / 0.15);
+}
+[data-mode="light"][data-theme="sunset"] {
+  --accent: #9c4a0e;
+  --accent-soft: rgb(156 74 14 / 0.12);
+}
+
+[data-theme="rose"] {
+  --t1: 170 70 100;
+  --t2: 130 50 90;
+  --t3: 190 90 110;
+  --accent: #e8759b;
+  --accent-soft: rgb(232 117 155 / 0.15);
+}
+[data-mode="light"][data-theme="rose"] {
+  --accent: #b03060;
+  --accent-soft: rgb(176 48 96 / 0.12);
+}
+
+[data-theme="mono"] {
+  --t1: 130 134 148;
+  --t2: 90 94 108;
+  --t3: 160 164 178;
+  --accent: #c3c8d6;
+  --accent-soft: rgb(195 200 214 / 0.15);
+}
+[data-mode="light"][data-theme="mono"] {
+  --accent: #444a5c;
+  --accent-soft: rgb(68 74 92 / 0.12);
+}
+
+/* ---------- base ---------- */
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Colour field the frosted panels refract. Fixed so it never scrolls out
+   from behind the glass. Hues come from the active theme. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  opacity: var(--field-opacity);
+  transition: opacity 0.3s ease;
+  background:
+    radial-gradient(52rem 52rem at 12% -10%, rgb(var(--t1) / 0.40), transparent 60%),
+    radial-gradient(44rem 44rem at 92% 4%, rgb(var(--t2) / 0.34), transparent 62%),
+    radial-gradient(50rem 50rem at 72% 96%, rgb(var(--t3) / 0.30), transparent 60%),
+    radial-gradient(38rem 38rem at 4% 88%, rgb(var(--t2) / 0.22), transparent 60%);
+}
+
+/* Fine grain stops the large gradients from banding on wide displays. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    backdrop-filter: blur(20px) saturate(160%);
+  }
+
+  .glass-strong {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    backdrop-filter: blur(28px) saturate(180%);
+  }
+
+  /* Light catching the top edge — the detail that reads as "glass" rather
+     than "translucent rectangle". */
+  .glass-edge {
+    position: relative;
+  }
+  .glass-edge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding-top: 1px;
+    background: linear-gradient(to bottom, var(--glass-highlight), transparent 42%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::selection {
+  background: var(--accent-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
