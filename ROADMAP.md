@@ -322,10 +322,27 @@ Living checklist across every part of the app. Checked items are shipped on
       library) — would need a real datastore. Not required by anything today;
       the cookie approach deliberately avoids one until something actually
       needs cross-device persistence.
-- [ ] CAPTCHA / bot protection on **our** login form — now genuinely relevant,
-      since `/login` is about to be public. Nothing rate-limits submissions to
-      our own Server Action today, so the form could be used to brute-force
-      SRM accounts through us (Zoho's own protection is the only backstop, and
-      it would blame our IP). Worth adding per-IP throttling before or shortly
-      after going public. Note: Zoho's bot protection is detected and reported
-      (`captcha_required`), never bypassed — that's a hard line.
+- [x] **Per-IP rate limiting on `/login`** (`lib/auth/rate-limit.ts`) —
+      10 attempts per IP per 15-minute fixed window, checked *before* the
+      request reaches Zoho, since capping what we send them is half the point.
+      Backed by Upstash Redis over its REST API via plain `fetch`, so it adds
+      **no dependency**. An in-memory counter was considered and rejected: on
+      serverless it's per-lambda-instance, so concurrent requests hit separate
+      counters and the real ceiling is (limit × warm instances) — unpredictable,
+      and worse than nothing because it feels like protection. **Fails open**
+      by design (unconfigured, unreachable, timeout, or malformed response all
+      allow the attempt, flagged `degraded`) — a limiter must not be able to
+      take sign-in down when a third-party has a bad day; the tradeoff is that
+      an Upstash outage leaves the form unprotected. A missing client IP also
+      fails open rather than sharing one bucket, since a shared "unknown"
+      bucket would let one script lock out every user whose IP we couldn't
+      read. Optional: without `UPSTASH_REDIS_REST_URL`/`_TOKEN` the app runs
+      exactly as before. Verified: 43/43 in `scripts/verify-rate-limit.ts`,
+      including an end-to-end blocking test against a fake Upstash server
+      (port 0) — the fail-open tests alone would have passed even if the
+      limiter never blocked anything.
+- [ ] Consider a per-username limit alongside per-IP. Per-IP stops one host
+      hammering many accounts; it doesn't stop a distributed attempt on one
+      account. Only worth it if abuse actually shows up.
+- [ ] Zoho's own bot protection is detected and reported
+      (`captcha_required`), never bypassed — a hard line, not a gap to close.

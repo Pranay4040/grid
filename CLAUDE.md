@@ -34,7 +34,9 @@ ROADMAP.md "Theming / UI system").
 
 **Dev:** `cp .env.example .env.local` and set `SESSION_SECRET` (`openssl rand -hex 32`), then `npm run dev` and sign in at `/login`. For the `scripts/*.ts` probes (which run outside Next and have no cookie jar), `npx tsx scripts/save-session.ts` still writes `scripts/.session.json`.
 
-**Deploy (Vercel):** set `SESSION_SECRET` in project env vars — use a *different* value than local. No database or other service is needed. Rotating the secret logs everyone out.
+11. **Login is rate-limited per IP** (`lib/auth/rate-limit.ts`): 10 attempts / 15 min, checked *before* hitting Zoho, via Upstash REST over plain `fetch` (no dependency). **Fails open** everywhere (unconfigured, down, timeout, no client IP) — never let the limiter break sign-in. Optional; the app runs fine without `UPSTASH_REDIS_REST_*`.
+
+**Deploy (Vercel):** set `SESSION_SECRET` in project env vars — use a *different* value than local. Optionally set `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` to activate login rate limiting (recommended before publicising). No other service is needed. Rotating `SESSION_SECRET` logs everyone out.
 
 **Security:** passwords never stored/logged/handled — forwarded to Zoho once and dropped. Sessions only ever leave the server encrypted. Known risk for a public deploy: all logins originate from Vercel's IPs, which is exactly the pattern Zoho rate-limits/CAPTCHAs; `client.ts` detects and reports both (`rate_limited`, `captcha_required`) rather than trying to bypass them — bypassing bot protection is a hard line.
 

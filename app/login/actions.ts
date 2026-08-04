@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { login } from "@/lib/academia/client";
 import { writeSession, sessionSecretMissing } from "@/lib/auth/session-cookie";
+import { checkLoginRateLimit, clientIpFrom } from "@/lib/auth/rate-limit";
 import type { LoginFailure } from "@/lib/academia/types";
 
 export type LoginState = {
@@ -45,6 +47,21 @@ export async function loginAction(
     return {
       message: "Enter your SRM email or NetID and your password.",
       badPasswordStreak: prevStreak,
+    };
+  }
+
+  // Rate-limit BEFORE contacting Zoho — the whole point is to cap how many
+  // requests this deployment makes to them, so an attempt we're going to
+  // reject must not be forwarded. Fails open if Upstash is unset/unreachable.
+  const limit = await checkLoginRateLimit(clientIpFrom(await headers()));
+  if (!limit.allowed) {
+    const mins = Math.ceil(limit.retryAfterSec / 60);
+    return {
+      message:
+        `Too many sign-in attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}. ` +
+        "Nothing was sent to SRM.",
+      reason: "rate_limited",
+      badPasswordStreak: 0,
     };
   }
 

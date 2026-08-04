@@ -19,11 +19,17 @@ nothing gated on it. `SESSION_SECRET` (≥32 chars) is required: `.env.local`
 locally, Vercel env vars deployed; `.env.example` documents it and is the one
 `.env*` file that ships.
 
-**Before going public, know these two:** (1) all logins will come from
-Vercel's IPs, exactly what Zoho rate-limits/CAPTCHAs — unknown until real
-traffic, and we will not bypass it. (2) Our own `/login` has no rate limiting,
-so it could be used to brute-force SRM accounts through us. Both are in
-ROADMAP.md under Auth.
+**Login rate limiting** (`lib/auth/rate-limit.ts`) — 10 attempts per IP per
+15 min, checked before the request reaches Zoho. Upstash REST over plain
+`fetch`, no dependency. Fails open everywhere by design. **Optional**: unset
+env vars = app behaves exactly as before, so it ships safely un-configured.
+Rejected an in-memory counter deliberately — per-lambda-instance on
+serverless, so its real ceiling is (limit × warm instances).
+
+**Before going public:** all logins originate from Vercel's IPs, exactly the
+pattern Zoho rate-limits/CAPTCHAs. Unknown until real traffic hits it, and we
+will not bypass it — `client.ts` reports `rate_limited`/`captcha_required`
+honestly. See ROADMAP.md under Auth.
 
 **Space-efficiency UI pass.** The shell was `max-w-4xl` (896px), leaving ~272px
 blank gutters each side at 1440px — now `max-w-6xl` (1152px). `StatTile` no
