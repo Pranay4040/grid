@@ -4,12 +4,14 @@ import { LoginForm } from "@/components/login-form";
 import { getDashboard } from "@/lib/academia/dashboard";
 
 export default async function LoginPage() {
-  // Only skip the form if the session actually still works against
-  // Academia (getDashboard tries a live fetch) — not just because a
-  // session file exists within our own local soft-expiry window. A file
-  // that's locally "not expired yet" but was already rejected server-side
-  // (the "Session expired" case on the dashboard) must still show the
-  // form, or this page bounces straight back to the page that sent it here.
+  // Only skip the form if the session actually still works against Academia
+  // (getDashboard does a live fetch) — not merely because a session cookie is
+  // present and decrypts. A cookie that's still structurally valid but was
+  // already rejected server-side (the "Session expired" case) must STILL show
+  // the form, or this page bounces straight back to whatever sent the user
+  // here. That exact loop made the login form unreachable once already.
+  //
+  // Cheap for signed-out visitors: with no cookie there's no network call.
   const result = await getDashboard();
   if (result.ok) redirect("/");
 

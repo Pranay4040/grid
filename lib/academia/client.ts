@@ -49,8 +49,11 @@ const UA =
 export const SESSION_SOFT_WINDOW_MS = 6 * 60 * 60 * 1000; // 6h
 
 /** Hard outer lifetime regardless of activity — a security backstop so a
- *  session can't stay valid forever just by being opened periodically. */
-const SESSION_ABSOLUTE_MAX_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+ *  session can't stay valid forever just by being opened periodically.
+ *  Exported so the session cookie's own max-age can be pinned to the same
+ *  deadline (see lib/auth/session-cookie.ts) — otherwise the browser would
+ *  keep sending a cookie the server has already decided is dead. */
+export const SESSION_ABSOLUTE_MAX_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export type ZohoEnvelope = {
   status_code?: number;

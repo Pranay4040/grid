@@ -5,6 +5,26 @@ Quick-context primer for picking this back up. Full detail: `ROADMAP.md`
 
 ## What got built (most recent session)
 
+**Multi-user auth — encrypted session cookie, no database.** Was the big
+deferred step; forced now because the target is Vercel, where the old
+`scripts/.session.json` path simply cannot work (no writable filesystem) and
+was single-user anyway. Each user's Academia bundle is AES-256-GCM encrypted
+(`lib/auth/session-crypto.ts`, HKDF from `SESSION_SECRET`) into their own
+httpOnly cookie (`lib/auth/session-cookie.ts`). **Server keeps no copy** —
+picked over Vercel KV/Postgres on purpose so there's no central vault of live
+SRM sessions to breach. `session-store.ts` (the file) is now CLI-diagnostics
+only; don't wire it back into the app. Also dropped `dashboard.ts`'s
+render-time `saveSession()` — Next forbids setting cookies mid-render, and
+nothing gated on it. `SESSION_SECRET` (≥32 chars) is required: `.env.local`
+locally, Vercel env vars deployed; `.env.example` documents it and is the one
+`.env*` file that ships.
+
+**Before going public, know these two:** (1) all logins will come from
+Vercel's IPs, exactly what Zoho rate-limits/CAPTCHAs — unknown until real
+traffic, and we will not bypass it. (2) Our own `/login` has no rate limiting,
+so it could be used to brute-force SRM accounts through us. Both are in
+ROADMAP.md under Auth.
+
 **Space-efficiency UI pass.** The shell was `max-w-4xl` (896px), leaving ~272px
 blank gutters each side at 1440px — now `max-w-6xl` (1152px). `StatTile` no
 longer stretches to fill a 2-col grid (it was a mostly-empty box); tiles are
@@ -103,18 +123,22 @@ context from `backdrop-filter` (pre-redesign), so the header needed
 
 ## Current state
 
-`npx tsc --noEmit`, `npx eslint .`, and all **12** `scripts/verify-*.ts`
-(exit 0) are green. Everything above is committed on branch
+`npx tsc --noEmit`, `npx eslint .`, `npx next build`, and all **13**
+`scripts/verify-*.ts` (exit 0) are green. Work sits on branch
 **`ui-revamp-courses-calendar`** (branched off `master` at `d8cb968`).
 
 **Not yet merged to `master`, and not pushed.** Remote is
-`github.com/Pranay4040/portalfree` (private). Merging is a fast-forward:
+`github.com/Pranay4040/portalfree`. Merging is a fast-forward:
 `git checkout master && git merge ui-revamp-courses-calendar`.
+
+User intends to make the repo **public** and deploy to **Vercel**. Set
+`SESSION_SECRET` in the Vercel project first — the app is inert without it.
 
 ## Next up (unstarted, pick one)
 
 1. User has a queue of **minor UI tweaks** they said they'd request one at a
    time — expect those first.
+2. Rate-limit `/login` before real public traffic (see Auth in ROADMAP.md).
 2. Decide `/welcome`'s real placement (redirect unauth visitors there? new
    route?) — still orphaned; `/` goes straight to the dashboard regardless of
    login state.

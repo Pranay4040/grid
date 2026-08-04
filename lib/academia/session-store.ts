@@ -1,20 +1,19 @@
 /**
- * Dev-only local session persistence.
+ * LOCAL CLI DIAGNOSTICS ONLY — **not** the app's auth path.
  *
- * Lets the password-bearing login happen once (user-run) and every subsequent
- * data call reuse the resulting cookie bundle. This file gets used regardless
- * of how long it's been sitting idle — only a 30-day hard backstop forces a
- * fresh login (see isExpired() in client.ts); everything short of that is
- * decided by actually trying the cookies against Academia, not by guessing.
- * dashboard.ts re-saves the session (via extendSession()) after each
- * successful fetch, refreshing the "last confirmed working" stamp.
+ * The running app is multi-user and stores each user's session in their own
+ * encrypted httpOnly cookie (lib/auth/session-cookie.ts). Do NOT wire this
+ * file back into the app: it is a single shared session (so every visitor
+ * would share one student's data) and it writes to local disk (which does not
+ * exist on Vercel — the deploy target).
  *
- * This is a DEVELOPMENT convenience. The production multi-user app must NOT
- * write sessions to a plaintext file; it will encrypt cookie bundles in a
- * server-side store keyed to our own session token. The file written here is
- * gitignored, but it does grant account access while valid — treat it like a
- * credential and delete it when done (`npx tsx scripts/clear-session.ts` or
- * just remove scripts/.session.json).
+ * What it's still for: the `scripts/*.ts` probes and parsers, which run under
+ * plain `npx tsx` outside Next and therefore have no cookie jar. `npx tsx
+ * scripts/save-session.ts` writes the file; the inspect/probe/verify scripts
+ * read it.
+ *
+ * The file is gitignored, but it grants account access while valid — treat it
+ * like a credential and delete it when done (`npx tsx scripts/clear-session.ts`).
  */
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { AcademiaSession } from "./types";

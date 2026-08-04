@@ -283,13 +283,49 @@ Living checklist across every part of the app. Checked items are shipped on
       third-party tool shouldn't mediate account recovery). Streak is carried
       via `useActionState`'s `prevState` in `app/login/actions.ts`, no local
       component state needed.
-- [ ] Multi-user login, server-side encrypted session store (public phase).
-      This is the bigger step: per-user accounts, encrypted server-side
-      session storage instead of a shared local file, `dashboard.ts` taking a
-      resolved user session instead of always reading the one local file.
-- [ ] CAPTCHA / bot protection on a public login form — not applicable yet
-      (no public-facing login exists; today's only "login" is running
-      `save-session.ts` locally). Revisit alongside multi-user auth. Note:
-      Zoho's own login already has bot protection our client detects and
-      reports (`captcha_required`) rather than tries to bypass — that's a
-      hard line, not something we build around.
+- [x] **Multi-user login via an encrypted session cookie — no session database.**
+      The old `scripts/.session.json` path was both single-user (one shared
+      file = every visitor seeing one student's data) and impossible on Vercel
+      (no writable filesystem), so it had to go regardless. Each user's
+      Academia cookie bundle is now AES-256-GCM encrypted
+      (`lib/auth/session-crypto.ts`; key derived from `SESSION_SECRET` via
+      HKDF-SHA256) and lives in that user's own httpOnly/SameSite=Lax cookie
+      (`lib/auth/session-cookie.ts`). **The server stores nothing** — chosen
+      over Vercel KV/Postgres deliberately: a central store of live SRM
+      sessions is a high-value breach target we'd then be responsible for, and
+      the payload (~700 bytes of cookie values → 1.4KB encrypted) fits a
+      cookie with room to spare. Logout is just deleting the cookie; rotating
+      `SESSION_SECRET` is a global sign-out. A missing/short secret surfaces
+      as a distinct `misconfigured` state (and the login action refuses to
+      send the password at all) rather than a 500 or a login that silently
+      can't persist. Verified: 36/36 adversarial checks in
+      `scripts/verify-session-crypto.ts` (tampered ciphertext/tag/IV, wrong
+      version, wrong key, malformed shapes, nonce uniqueness, size budget),
+      plus live confirmation — all six routes served real data through a
+      minted cookie, and tampered/forged/absent cookies all fell back to
+      "Not connected" with no data leak.
+- [x] **Dropped the render-time session re-save.** Next forbids setting
+      cookies once streaming starts, so `dashboard.ts`'s
+      `saveSession(extendSession(...))` had to go. Nothing was lost:
+      `expiresAt` was already documented as informational (only `issuedAt` +
+      the 30-day backstop gate anything), and `probe-session-liveness.ts`
+      confirmed Academia reissues no cookies on a data fetch. The cookie's own
+      max-age now carries the lifetime, pinned to the same hard deadline.
+- [ ] **Zoho may throttle a public deployment.** Every login will originate
+      from Vercel's IP range — the exact pattern Zoho's bot protection
+      targets. `client.ts` already classifies `captcha_required` and
+      `rate_limited` and reports them honestly (bypassing bot protection is
+      out of scope, permanently). Unknown until real traffic hits it; if it
+      becomes a problem the honest options are a clear error state or asking
+      users to sign in on the official portal first.
+- [ ] Per-user accounts of our own (saved preferences, study-material
+      library) — would need a real datastore. Not required by anything today;
+      the cookie approach deliberately avoids one until something actually
+      needs cross-device persistence.
+- [ ] CAPTCHA / bot protection on **our** login form — now genuinely relevant,
+      since `/login` is about to be public. Nothing rate-limits submissions to
+      our own Server Action today, so the form could be used to brute-force
+      SRM accounts through us (Zoho's own protection is the only backstop, and
+      it would blame our IP). Worth adding per-IP throttling before or shortly
+      after going public. Note: Zoho's bot protection is detected and reported
+      (`captcha_required`), never bypassed — that's a hard line.

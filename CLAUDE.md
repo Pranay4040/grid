@@ -28,8 +28,14 @@ ROADMAP.md "Theming / UI system").
 6. Portal exposes **no** day-order/calendar source to this account (probed 2026-07-26, `scripts/probe-day-order.ts` — every planner/calendar page 403s or is an empty shell). Today's day-order = manual anchor + weekday projection, `lib/timetable/day-order.ts`; this is permanent, not provisional. `/calendar` projects that same anchor across a whole month (`lib/timetable/calendar.ts`) — **every date there is an estimate that drifts after any skipped holiday**, and the page says so. `resolveDayOrder()` projects both directions (signed working-day count + floored modulo); don't "simplify" it back to an unsigned count, that silently breaks every past date.
 7. GPA estimator (`/gpa`, `lib/academia/gpa.ts`) models SRM's 60/40 internal/external split; its marks→grade cutoff table (`MARK_GRADE_CUTOFFS`) is a commonly-cited scale, **unverified** against an official SRM document.
 
-**Dev:** user runs `save-session.ts` (writes gitignored `scripts/.session.json`, ~6h); app loads it.
+8. **Auth is multi-user via an encrypted cookie — there is NO session database.** Each user's Academia cookie bundle is AES-256-GCM encrypted (`lib/auth/session-crypto.ts`, key = HKDF of `SESSION_SECRET`) and stored in their own httpOnly cookie (`lib/auth/session-cookie.ts`). The server keeps no copy, so there's no central vault to breach and logout is just deleting the cookie. Requires `SESSION_SECRET` (≥32 chars) in `.env.local` locally and in Vercel's env vars deployed; without it the app reports `misconfigured` rather than 500ing.
+9. **Cookies can't be set during a Server Component render** (Next constraint). That's why `dashboard.ts` no longer re-saves the session after each fetch — only Server Actions (`app/login/actions.ts`, `app/logout/actions.ts`) write the cookie. Don't reintroduce a write in the render path.
+10. `lib/academia/session-store.ts` (the `scripts/.session.json` file) is **CLI-diagnostics only** now — never the app's auth path. It's one shared session and needs a writable disk, neither of which works on Vercel.
 
-**Security:** passwords never stored/logged/handled; entry stays on the user's machine.
+**Dev:** `cp .env.example .env.local` and set `SESSION_SECRET` (`openssl rand -hex 32`), then `npm run dev` and sign in at `/login`. For the `scripts/*.ts` probes (which run outside Next and have no cookie jar), `npx tsx scripts/save-session.ts` still writes `scripts/.session.json`.
+
+**Deploy (Vercel):** set `SESSION_SECRET` in project env vars — use a *different* value than local. No database or other service is needed. Rotating the secret logs everyone out.
+
+**Security:** passwords never stored/logged/handled — forwarded to Zoho once and dropped. Sessions only ever leave the server encrypted. Known risk for a public deploy: all logins originate from Vercel's IPs, which is exactly the pattern Zoho rate-limits/CAPTCHAs; `client.ts` detects and reports both (`rate_limited`, `captcha_required`) rather than trying to bypass them — bypassing bot protection is a hard line.
 
 **Design:** semantic colour tokens (no AI violet/cyan); WCAG-AA.

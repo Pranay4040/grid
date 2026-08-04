@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { login } from "@/lib/academia/client";
-import { saveSession } from "@/lib/academia/session-store";
+import { writeSession, sessionSecretMissing } from "@/lib/auth/session-cookie";
 import type { LoginFailure } from "@/lib/academia/types";
 
 export type LoginState = {
@@ -27,6 +27,20 @@ export async function loginAction(
   const password = String(formData.get("password") ?? "");
   const prevStreak = prevState?.badPasswordStreak ?? 0;
 
+  // Fail before touching the password: with no SESSION_SECRET we could
+  // authenticate against Zoho and then have nowhere safe to put the result.
+  // Better to never send the credential at all than to hand it over for
+  // a login we already know we can't persist.
+  if (sessionSecretMissing()) {
+    return {
+      message:
+        "This deployment isn't configured for sign-in yet (missing SESSION_SECRET). " +
+        "Nothing was sent to SRM.",
+      reason: "unexpected",
+      badPasswordStreak: 0,
+    };
+  }
+
   if (!username || !password) {
     return {
       message: "Enter your SRM email or NetID and your password.",
@@ -43,7 +57,9 @@ export async function loginAction(
     };
   }
 
-  saveSession(outcome.session);
+  // Server Action, so setting the cookie here is legal (a Server Component
+  // render would not be — see lib/auth/session-cookie.ts).
+  await writeSession(outcome.session);
   revalidatePath("/");
   redirect("/");
 }

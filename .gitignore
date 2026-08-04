@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the template carries no real secret and must ship, so contributors
+# and the Vercel deploy know which variables to set.
+!.env.example
 
 # vercel
 .vercel

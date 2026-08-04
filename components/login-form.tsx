@@ -87,9 +87,17 @@ export function LoginForm() {
 
       <SubmitButton />
 
+      {/* This has to stay accurate — people are handing over university
+          credentials to a third-party site on the strength of it. */}
       <p className="text-xs text-faint">
-        Your password is sent straight to SRM Academia and never stored — only
-        the resulting session cookie is saved, locally, on this machine.
+        Your password is sent straight to SRM Academia to sign in, and is never
+        stored, logged, or kept after that request. The resulting session is
+        encrypted and held in your own browser cookie — this server keeps no
+        copy of it. Signing out deletes it.
+      </p>
+      <p className="text-xs text-faint">
+        PortalFree is unofficial and not affiliated with or endorsed by SRM
+        Institute of Science and Technology.
       </p>
     </form>
   );

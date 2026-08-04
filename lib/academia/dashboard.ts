@@ -1,14 +1,14 @@
 /**
- * Server-side dashboard loader. For local dev it reads the saved session file;
- * the production multi-user path will pass a session resolved from our own
- * auth cookie instead. Everything downstream (fetch → parse → grid → stats) is
- * identical regardless of where the session came from.
+ * Server-side dashboard loader. Multi-user: the session comes from the
+ * caller's own encrypted cookie (lib/auth/session-cookie.ts), so two students
+ * hitting the same deployment get their own data. Everything downstream
+ * (fetch → parse → grid → stats) is identical regardless of whose session it is.
  */
 import "server-only";
 import { cache } from "react";
-import { authedFetch, extendSession } from "./client";
+import { authedFetch } from "./client";
 import { getAttendance, getTimetable } from "./data";
-import { loadSession, saveSession } from "./session-store";
+import { readSession, sessionSecretMissing } from "../auth/session-cookie";
 import { buildSchedule, type WeekSchedule } from "./timetable-grid";
 import { ATTENDANCE_THRESHOLD } from "./attendance-planner";
 import type { AttendanceData, StudentInfo, TimetableData } from "./data-types";
@@ -29,7 +29,14 @@ export type DashboardData = {
 
 export type DashboardResult =
   | { ok: true; data: DashboardData }
-  | { ok: false; reason: "no_session" | "session_expired" | "fetch_failed"; message: string };
+  | {
+      ok: false;
+      /** "misconfigured" = the DEPLOYMENT is broken (no SESSION_SECRET), not
+       *  the user's session — worth saying differently so nobody tries to fix
+       *  it by logging in again. */
+      reason: "no_session" | "session_expired" | "fetch_failed" | "misconfigured";
+      message: string;
+    };
 
 /**
  * Cached per-request so the shared layout and a page can both call this
@@ -39,7 +46,20 @@ export type DashboardResult =
 export const getDashboard = cache(loadDashboard);
 
 export async function loadDashboard(): Promise<DashboardResult> {
-  const session = loadSession();
+  // A missing SESSION_SECRET means nobody can log in at all. Report it as a
+  // server problem rather than letting every user see "not connected" and
+  // retry a login that cannot possibly succeed.
+  if (sessionSecretMissing()) {
+    return {
+      ok: false,
+      reason: "misconfigured",
+      message:
+        "This deployment is missing its SESSION_SECRET environment variable, " +
+        "so sessions can't be encrypted. Nothing you do will fix this from here.",
+    };
+  }
+
+  const session = await readSession();
   if (!session) {
     return { ok: false, reason: "no_session", message: "No active Academia session." };
   }
@@ -57,13 +77,18 @@ export async function loadDashboard(): Promise<DashboardResult> {
       return {
         ok: false,
         reason: "session_expired",
-        message: "Your Academia session expired. Reconnect with save-session.ts.",
+        message: "Your Academia session expired. Sign in again to reconnect.",
       };
     }
 
-    // Real, successful use — this is the actual signal of validity, so push
-    // the soft window forward and persist whatever cookies got refreshed.
-    saveSession(extendSession(session, fetchAs.jar));
+    // NOTE: we deliberately do NOT re-save the session here. This runs during
+    // a Server Component render, and Next forbids setting cookies once
+    // streaming has begun (see node_modules/next/dist/docs/.../cookies.md).
+    // Nothing is actually lost: `expiresAt` was already documented as purely
+    // informational (nothing gates on it — only `issuedAt` + the 30-day
+    // backstop do), and probe-session-liveness.ts confirmed Academia reissues
+    // no cookies on a data fetch. The cookie's own max-age carries the
+    // lifetime instead.
 
     const batch = (timetable.student.batch || attendance.student.batch).match(/\d+/)?.[0] ?? "1";
     const week = buildSchedule(timetable.courses, batch);
