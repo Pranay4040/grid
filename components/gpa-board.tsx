@@ -1,6 +1,6 @@
 "use client";
 
-import { StatTile } from "@/components/glass";
+import { StatTile } from "@/components/panel";
 import { GpaTable } from "@/components/gpa-table";
 import { useGpaEstimates } from "@/lib/gpa/estimate-store";
 import { estimateSemester } from "@/lib/academia/gpa";
@@ -12,7 +12,7 @@ export function GpaBoard({ courses, marks }: { courses: Course[]; marks: Subject
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-wrap gap-3">
         <StatTile
           label="SGPA"
           value={result.sgpa == null ? "—" : result.sgpa.toFixed(2)}

@@ -33,7 +33,7 @@ export function WeekGrid({
       <table className="w-full min-w-[720px] border-collapse text-xs sm:text-sm">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 border-b border-[var(--line)] bg-[var(--glass-bg-strong)] p-2 text-left font-medium text-muted">
+            <th className="sticky left-0 z-10 border-b border-[var(--line)] bg-[var(--surface-raised)] p-2 text-left font-medium text-muted">
               Day
             </th>
             {PERIOD_TIMES.map((t, i) => (
@@ -57,7 +57,7 @@ export function WeekGrid({
                 <th
                   scope="row"
                   className={clsx(
-                    "sticky left-0 z-10 border-b border-[var(--line)] bg-[var(--glass-bg-strong)] p-2 text-left font-medium tabular-nums",
+                    "sticky left-0 z-10 border-b border-[var(--line)] bg-[var(--surface-raised)] p-2 text-left font-medium tabular-nums",
                     isToday ? "text-accent" : "text-foreground",
                   )}
                 >
@@ -88,7 +88,7 @@ export function WeekGrid({
                             cls.optional && "opacity-50",
                           )}
                           style={{
-                            background: "var(--glass-hover)",
+                            background: "var(--panel-hover)",
                             borderLeft: `2px solid ${tintOf(cls.course.code)}`,
                           }}
                           title={cls.course.title}

@@ -1,11 +1,16 @@
-import { GlassPanel } from "@/components/glass";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { logoutAction } from "@/app/logout/actions";
+import { Panel } from "@/components/panel";
+import { NavMenu } from "@/components/nav-menu";
 import type { DashboardResult } from "@/lib/academia/dashboard";
 
 export function AppHeader({ result }: { result: DashboardResult }) {
   return (
-    <GlassPanel className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+    // relative + z-index: every Panel gets its own stacking context
+    // from backdrop-filter (see globals.css), so without this the header's
+    // popover — despite its own z-50 — paints *underneath* the static
+    // stat-tile/content panels that come after it in the DOM. Positioning
+    // the header itself lifts its whole subtree above those static siblings.
+    <Panel className="relative z-40 flex items-center gap-4 p-4 sm:p-5">
+      <NavMenu connected={result.ok} />
       <div className="min-w-0">
         <p className="text-lg font-semibold tracking-tight">
           Portal<span className="text-accent">Free</span>
@@ -20,19 +25,6 @@ export function AppHeader({ result }: { result: DashboardResult }) {
           <p className="mt-0.5 text-sm text-muted">SRM academic companion</p>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        {result.ok ? (
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-[var(--glass-hover)] hover:text-danger"
-            >
-              Logout
-            </button>
-          </form>
-        ) : null}
-        <ThemeSwitcher />
-      </div>
-    </GlassPanel>
+    </Panel>
   );
 }

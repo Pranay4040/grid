@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { GlassPanel } from "@/components/glass";
+import { Panel } from "@/components/panel";
 
 export function NotConnected({
   reason,
@@ -22,7 +22,7 @@ export function NotConnected({
         : message;
   const showConnect = reason === "no_session" || reason === "session_expired";
   return (
-    <GlassPanel className="p-8 text-center sm:p-12">
+    <Panel className="p-8 text-center sm:p-12">
       <h2 className="text-lg font-medium">{heading}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted">{body}</p>
       {showConnect ? (
@@ -33,6 +33,6 @@ export function NotConnected({
           Connect your account
         </Link>
       ) : null}
-    </GlassPanel>
+    </Panel>
   );
 }

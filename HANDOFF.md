@@ -3,74 +3,130 @@
 Quick-context primer for picking this back up. Full detail: `ROADMAP.md`
 (feature checklist) and `CLAUDE.md` (stack/facts, always-loaded).
 
-## What got built this session
+## What got built (most recent session)
 
-**Timetable customization** (`lib/timetable/`, `components/timetable-view.tsx`)
-Overlay pattern: scrape stays source of truth, user edits (optional/removed/
-added classes) are a diff in localStorage, merged at render via pure
-`applyCustom()`. Full-week grid view. Today/Now via a manual day-order anchor
-(portal doesn't confirm current day-order; unverified — see ROADMAP).
+**Space-efficiency UI pass.** The shell was `max-w-4xl` (896px), leaving ~272px
+blank gutters each side at 1440px — now `max-w-6xl` (1152px). `StatTile` no
+longer stretches to fill a 2-col grid (it was a mostly-empty box); tiles are
+fixed-width in a `flex flex-wrap` row. Every list panel
+(attendance/marks/GPA/timetable-day) went from single-column divider-separated
+rows — which left a wide blank gap between short text and right-aligned
+numbers — to responsive card grids (1 col → 2 → 3, GPA 1 → 2 since its cards
+are richer). Skeletons updated to match so there's no layout jump.
+**Colour scheme deliberately untouched** — this was purely layout/density.
 
-**Session auth, fixed twice**
-1. Was hard-capped at 6h (our own guess, not a real Zoho limit) → now
-   self-extends on every successful load (`extendSession()`), 30-day hard
-   backstop only.
-2. Bug: that fix still hard-gated on the guessed expiry before even trying
-   the real cookies → false "logged out" after ~24h idle even though Zoho
-   was still fine. Fixed: `isExpired()` now only enforces the 30-day cap;
-   validity always comes from actually trying the fetch.
-`scripts/probe-session-liveness.ts` tests the real session independent of
-our bookkeeping.
+**Fixed a real login redirect loop.** `/login` guarded on `loadSession()`,
+which only checks our own local soft-expiry stamp, never whether Academia
+still accepts the cookies. With a session file that was locally "not expired"
+but already rejected server-side, `/login` bounced to `/`, which bounced back
+to `/login` — the sign-in form was **unreachable**. Now guards on
+`getDashboard()` (the live-checked result), matching session-store.ts's own
+stated principle. Confirmed with the whole stack: `discoverService()` works,
+fake creds correctly return `bad_password`, form POSTs 200.
 
-**Login/logout UI** — `/login` (Server Action + form, replaces the
-env-var-only CLI script), Logout button in the header. Fixed a real
-classifier bug (wrong password showed a raw JSON dump instead of "Incorrect
-NetID or password" — Zoho's actual error shape wasn't handled). Reset-password
-hint after 3 bad attempts, links to the official portal (we don't build
-password reset ourselves — out of scope/security).
+**Courses page** (`/courses`) + **Calendar page** (`/calendar`) — see ROADMAP.md
+for the full write-up. Both are real nav entries now; `SOON_ITEMS` is empty.
 
-**Attendance skip-planner + tab**
-`lib/academia/attendance-planner.ts` (`planAttendance()`, pure, tested) does
-the "can I skip / must I attend" math per row (Theory/Practical separate).
-`lib/academia/attendance-cards.ts` reconciles it against raw rows so
-not-started courses show instead of vanishing. Lives on its own **`/attendance`**
-page now, not the homepage.
+**Fixed a real day-order bug the calendar surfaced.** `resolveDayOrder()`
+counted working days with an *unsigned* helper, so every date BEFORE the
+anchor returned the anchor's own day-order. The Today view never hit it
+(anchor is always ≤ today); a month grid hits it every render. Helper is now
+signed + floored modulo. Don't "simplify" it back.
 
-**Real nav shell** — `app/(app)/` route group (keeps `/login` outside it),
-sidebar (desktop) / tab row (mobile), `components/app-nav.tsx` is the only
-client piece (active-tab highlight). `loading.tsx` skeletons on both routes
-since real Academia fetches take a few seconds.
+## What got built (prior session)
+
+**Day-order verified, not guessed.** `scripts/probe-day-order.ts` probed 78
+candidate portal page names live — confirmed Academia exposes **no**
+day-order/calendar source to this account (403s or empty shells). Manual
+anchor (`lib/timetable/day-order.ts`) is now documented as the permanent
+design, not provisional. Also added `source: "anchor"|"unconfirmed"|"guess"`
+so a stale (10+ working day) or absent anchor is labeled honestly in the UI
+instead of presented as fact.
+
+**Marks parser bug fixed.** `findTable()` in `lib/academia/parse.ts` silently
+truncated the marks table to 1 of 9 courses (non-greedy regex stopped at the
+first *nested* `</table>`). New `findTableNested()` fixes it — verified live
+(`marks subjects: 9`, was 1).
+
+**Marks + GPA shipped.** `/marks` — read-only table, honest "Not graded yet"
+(real assessment data doesn't exist yet this term, confirmed live).
+`/gpa` — SGPA estimator modeling SRM's actual 60/40 internal/external split:
+portal-published internal (real, wired, currently 0 for everyone) + your
+estimate for the rest; external estimated out of 75, converted ×40/75; a
+commonly-cited **unverified** marks→grade cutoff table
+(`MARK_GRADE_CUTOFFS` in `lib/academia/gpa.ts` — confirm against an official
+doc before trusting it). Per-subject grade slider (pure visualization, never
+writes to the stored estimate). No CGPA history table — scoped to this
+semester only, per user's explicit call.
+
+**`/welcome` landing hero.** Standalone marketing page, own flat dark
+palette (`--bg #0d0d11`, `--accent #b6b2f2`), independent of the app's theme.
+16:9 desktop grid (fits one viewport, no scroll), hamburger nav with full
+focus trap + scroll lock, full motion system, `prefers-reduced-motion`
+support. **Not wired into the real entry flow** — `/` still goes straight to
+the dashboard regardless of login state.
+
+**Whole-app redesign, on explicit request.** Removed the 6-palette ×
+light/dark glassmorphism system entirely (`components/theme.tsx`,
+`theme-switcher.tsx` deleted) for one fixed flat theme matching `/welcome`.
+`components/glass.tsx` → `components/panel.tsx` (`GlassPanel`→`Panel`,
+`strong`→`raised` prop). Token *names* unchanged (`--accent`, `--line`,
+`text-muted`...) so most components only needed `var(--glass-*)` → new names
+(`--panel-hover`, `--surface-raised`). Nav collapsed into one hamburger menu
+(`components/nav-menu.tsx`) at every viewport — replaced the old persistent
+sidebar/tab-row/always-visible theme switcher. Marks/GPA tables rebuilt as
+card lists (were dense `<table>`s needing horizontal scroll — the #1
+complaint). Fixed a real z-index bug: every `Panel` gets its own stacking
+context from `backdrop-filter` (pre-redesign), so the header needed
+`relative z-40` itself or its popover painted under later content.
 
 ## Conventions established (keep following these)
 
 - **No test framework** — pure logic gets a standalone `scripts/verify-*.ts`
-  (plain `check(name, actual, expected)`, PASS/FAIL, `process.exit`). 5 exist,
-  ~65 checks total, all passing.
-- **Persisted client state** = `useSyncExternalStore` over localStorage,
-  matching `components/theme.tsx`'s pattern (cached snapshot, cross-tab sync).
-- **Never touch the user's password** — I don't type real or fake credentials
-  into the login form myself, ever. User tests those flows.
-- **Ask before assuming, plan before building** — user wants Explore → design
-  → clarifying questions → written plan → approval, *per part*, before code.
-  Don't skip this even for "obvious" next steps.
-- Verify visually via the preview browser tool after every change; a mock
-  data harness at a temp route works when no live session is available.
+  (`check(name, actual, expected)`, PASS/FAIL, `process.exit`). ~9 exist now.
+- **Persisted client state** = `useSyncExternalStore` over localStorage
+  (`lib/store/json-store.ts`'s `makeJsonStore`, shared helper now).
+- **Never touch the user's password.**
+- **Ask before assuming, plan before building** — Explore → design →
+  clarifying questions → written plan → approval, per part.
+- **Mask everything in probe/diagnostic scripts** — this session caught a
+  real PII leak (reg number printed unmasked) from a table-structure bug in
+  `inspect-pages.ts` (fixed) and `probe-day-order.ts` (fixed same-session).
+  Never print a raw HTML slice; only status/counts/masked cells.
+- **Double-check the browser tool before trusting it** — this session hit
+  several tool-specific artifacts (stale console buffers, stale
+  `getComputedStyle`, stuck Suspense-streamed renders) on the long-lived
+  "seed" tab. A **fresh tab** (`tabs_create`) + direct `fetch()` checks
+  reliably cut through all of them. Don't assume a live-render check failure
+  means the code is wrong — cross-check via `tsc`/lint/server logs/raw fetch
+  first.
 
 ## Current state
 
-Real session active (`scripts/.session.json`), real student data flowing
-through both pages. Dev server: `npm run dev` (or via the preview tool).
-`npx tsc --noEmit && npm run lint` both clean.
+`npx tsc --noEmit`, `npx eslint .`, and all **12** `scripts/verify-*.ts`
+(exit 0) are green. Everything above is committed on branch
+**`ui-revamp-courses-calendar`** (branched off `master` at `d8cb968`).
+
+**Not yet merged to `master`, and not pushed.** Remote is
+`github.com/Pranay4040/portalfree` (private). Merging is a fast-forward:
+`git checkout master && git merge ui-revamp-courses-calendar`.
 
 ## Next up (unstarted, pick one)
 
-From ROADMAP.md, roughly in order of readiness:
-1. **Timetable loose ends** — verify today's day-order against the live
-   portal now that login works reliably; lab (`L##`) slot placement (now
-   have real data to check against).
-2. **Marks/GPA** — blocked until assessment data exists on the portal.
-3. **Multi-user/public auth** — the big deferred step: real accounts,
-   encrypted server-side sessions, no shared local file.
-4. Minor cleanup: dedupe `SWATCH` (theme-switcher.tsx) vs `--t*` (globals.css).
+1. User has a queue of **minor UI tweaks** they said they'd request one at a
+   time — expect those first.
+2. Decide `/welcome`'s real placement (redirect unauth visitors there? new
+   route?) — still orphaned; `/` goes straight to the dashboard regardless of
+   login state.
+3. Multi-user/public auth + server-side encrypted session store — the big
+   deferred step, and the blocker for any public release.
+4. Study-material library — unscoped differentiator vs. PortalX.
+5. Smaller: Timetable still lives on Overview rather than its own tab; `.ics`
+   export; batch slot templates beyond 1 & 2; motion polish on the remaining
+   surfaces.
+
+**Known-blocked (not fixable by us):** real assessment data (portal has
+published none this term), holiday drift on `/calendar`, and
+`MARK_GRADE_CUTOFFS` still unverified against an official SRM document.
 
 Ask the user which part before touching any of these.

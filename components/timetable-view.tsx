@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { GlassPanel } from "@/components/glass";
+import { Panel } from "@/components/panel";
 import { WeekGrid } from "@/components/week-grid";
 import { AddClassForm } from "@/components/add-class-form";
 import {
@@ -108,7 +108,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
   }
 
   return (
-    <GlassPanel className="overflow-hidden">
+    <Panel className="overflow-hidden">
       {/* Row 1 — title, view toggle, add-class trigger */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] p-4 sm:p-5">
         <h2 className="font-medium">Timetable</h2>
@@ -116,7 +116,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
           <div
             role="radiogroup"
             aria-label="Timetable view"
-            className="flex gap-0.5 rounded-lg bg-[var(--glass-hover)] p-0.5"
+            className="flex gap-0.5 rounded-lg bg-[var(--panel-hover)] p-0.5"
           >
             {(["day", "week"] as const).map((v) => (
               <button
@@ -143,7 +143,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
               "rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
               adding
                 ? "bg-[var(--accent-soft)] text-accent"
-                : "text-muted hover:bg-[var(--glass-hover)] hover:text-foreground",
+                : "text-muted hover:bg-[var(--panel-hover)] hover:text-foreground",
             )}
           >
             {adding ? "Cancel" : "+ Add class"}
@@ -169,7 +169,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
                   "relative size-9 rounded-lg text-sm font-medium tabular-nums transition-colors",
                   d.dayOrder === day
                     ? "bg-[var(--accent-soft)] text-accent"
-                    : "text-muted hover:bg-[var(--glass-hover)] hover:text-foreground",
+                    : "text-muted hover:bg-[var(--panel-hover)] hover:text-foreground",
                 )}
                 title={`Day Order ${d.dayOrder}`}
               >
@@ -198,7 +198,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
                       correctTo(d);
                       setCorrecting(false);
                     }}
-                    className="size-5 rounded text-[0.7rem] font-medium text-muted transition-colors hover:bg-[var(--glass-hover)] hover:text-foreground"
+                    className="size-5 rounded text-[0.7rem] font-medium text-muted transition-colors hover:bg-[var(--panel-hover)] hover:text-foreground"
                   >
                     {d}
                   </button>
@@ -251,7 +251,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
       {view === "week" ? (
         <WeekGrid week={displayWeek} todayDayOrder={todayDayOrder} />
       ) : active && active.classes.length > 0 ? (
-        <ul className="divide-y divide-[var(--line)]">
+        <ul className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
           {active.classes.map((c) => {
             const key = c.custom ? c.customId! : c.course.code;
             const isCurrent = current === c;
@@ -260,70 +260,68 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
               <li
                 key={c.custom ? c.customId : `${c.period}-${c.course.code}`}
                 className={clsx(
-                  "flex items-stretch gap-3 p-4 transition-colors sm:gap-4 sm:p-5",
+                  "flex flex-col gap-2 rounded-xl border p-3 transition-colors",
                   isCurrent
-                    ? "bg-[var(--accent-soft)]"
-                    : "hover:bg-[var(--glass-hover)]",
+                    ? "border-[var(--accent)]/40 bg-[var(--accent-soft)]"
+                    : "border-[var(--line)] hover:bg-[var(--panel-hover)]",
                 )}
               >
-                <span
-                  className={clsx(
-                    "w-1 shrink-0 rounded-full transition-opacity",
-                    c.optional && "opacity-40",
-                  )}
-                  style={{ background: tintOf(c.course.code) }}
-                  aria-hidden
-                />
                 <div
                   className={clsx(
-                    "min-w-0 flex-1 transition-opacity",
+                    "flex min-w-0 items-start gap-2 transition-opacity",
                     c.optional && "opacity-55",
                   )}
                 >
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <p className="truncate font-medium">{c.course.title}</p>
-                    {isCurrent ? <Badge tone="accent">Now</Badge> : null}
-                    {isNext ? <Badge>Next</Badge> : null}
-                    {c.optional ? <Badge>Optional</Badge> : null}
-                    {c.custom ? <Badge>Added</Badge> : null}
+                  <span
+                    className="mt-1.5 size-1.5 shrink-0 rounded-full"
+                    style={{ background: tintOf(c.course.code) }}
+                    aria-hidden
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="truncate font-medium">{c.course.title}</p>
+                      {isCurrent ? <Badge tone="accent">Now</Badge> : null}
+                      {isNext ? <Badge>Next</Badge> : null}
+                      {c.optional ? <Badge>Optional</Badge> : null}
+                      {c.custom ? <Badge>Added</Badge> : null}
+                    </div>
+                    <p className="mt-0.5 truncate text-sm text-muted">
+                      {c.course.code ? (
+                        <span className="font-mono">{c.course.code}</span>
+                      ) : null}
+                      {c.course.room ? ` · ${c.course.room}` : ""}
+                      {c.course.faculty ? ` · ${c.course.faculty}` : ""}
+                    </p>
                   </div>
-                  <p className="mt-0.5 truncate text-sm text-muted">
-                    {c.course.code ? (
-                      <span className="font-mono">{c.course.code}</span>
-                    ) : null}
-                    {c.course.room ? ` · ${c.course.room}` : ""}
-                    {c.course.faculty ? ` · ${c.course.faculty}` : ""}
-                  </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-mono text-sm tabular-nums">{to12h(c.start)}</p>
-                  <p className="font-mono text-xs tabular-nums text-faint">
-                    {to12h(c.end)}
+                <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+                  <p className="font-mono text-xs tabular-nums text-muted">
+                    {to12h(c.start)} – {to12h(c.end)}
                   </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end justify-center gap-1 pl-1">
-                  <button
-                    type="button"
-                    aria-pressed={!!c.optional}
-                    onClick={() => toggleOptional(key)}
-                    className={clsx(
-                      "rounded px-1.5 py-0.5 text-[0.7rem] font-medium whitespace-nowrap transition-colors",
-                      c.optional
-                        ? "text-accent"
-                        : "text-faint hover:text-foreground",
-                    )}
-                  >
-                    {c.optional ? "Required" : "Optional"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      c.custom ? removeCustomClass(c.customId!) : removeClass(c.course.code)
-                    }
-                    className="rounded px-1.5 py-0.5 text-[0.7rem] font-medium whitespace-nowrap text-faint transition-colors hover:text-danger"
-                  >
-                    {c.custom ? "Delete" : "Remove"}
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={!!c.optional}
+                      onClick={() => toggleOptional(key)}
+                      className={clsx(
+                        "rounded px-1.5 py-0.5 text-[0.7rem] font-medium whitespace-nowrap transition-colors",
+                        c.optional
+                          ? "text-accent"
+                          : "text-faint hover:text-foreground",
+                      )}
+                    >
+                      {c.optional ? "Required" : "Optional"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        c.custom ? removeCustomClass(c.customId!) : removeClass(c.course.code)
+                      }
+                      className="rounded px-1.5 py-0.5 text-[0.7rem] font-medium whitespace-nowrap text-faint transition-colors hover:text-danger"
+                    >
+                      {c.custom ? "Delete" : "Remove"}
+                    </button>
+                  </div>
                 </div>
               </li>
             );
@@ -360,7 +358,7 @@ export function TimetableView({ week }: { week: WeekSchedule }) {
           ))}
         </div>
       ) : null}
-    </GlassPanel>
+    </Panel>
   );
 }
 
@@ -377,7 +375,7 @@ function Badge({
         "rounded-full px-1.5 py-0.5 text-[0.65rem] font-medium tracking-wide uppercase",
         tone === "accent"
           ? "bg-[var(--accent)] text-[var(--bg)]"
-          : "bg-[var(--glass-hover)] text-muted",
+          : "bg-[var(--panel-hover)] text-muted",
       )}
     >
       {children}

@@ -36,16 +36,29 @@ function isWeekend(date: Date): boolean {
   return day === 0 || day === 6;
 }
 
-/** Count Mon–Fri dates strictly after `from` up to and including `to`. */
+/**
+ * Signed count of Mon–Fri dates strictly between `from` and `to`, counting
+ * `to` itself: positive when `to` is after `from`, negative when before, 0 on
+ * the same date.
+ *
+ * The sign matters for the calendar, which projects the anchor both forward
+ * AND backward across a whole month. An earlier unsigned version returned 0
+ * for every date before the anchor, which made every past weekday report the
+ * anchor's own day-order.
+ */
 function workingDaysBetweenExclusive(from: Date, to: Date): number {
+  if (toDateKey(from) === toDateKey(to)) return 0;
+  const forward = to > from;
+  const [start, end] = forward ? [from, to] : [to, from];
+
   let count = 0;
-  const cur = new Date(from);
+  const cur = new Date(start);
   cur.setDate(cur.getDate() + 1);
-  while (cur <= to) {
+  while (cur <= end) {
     if (!isWeekend(cur)) count++;
     cur.setDate(cur.getDate() + 1);
   }
-  return count;
+  return forward ? count : -count;
 }
 
 /**
@@ -67,16 +80,21 @@ export function resolveDayOrder(
     if (toDateKey(anchorDate) === toDateKey(today)) return anchor.dayOrder;
     if (isWeekend(today)) return null;
     const diff = workingDaysBetweenExclusive(anchorDate, today);
-    return ((anchor.dayOrder - 1 + diff) % 5) + 1;
+    // Floored modulo — `diff` is negative for dates before the anchor, and
+    // JS's `%` keeps the sign of the dividend, so a bare `% 5` would land
+    // outside 1-5 when projecting backward.
+    const rotated = (((anchor.dayOrder - 1 + diff) % 5) + 5) % 5;
+    return rotated + 1;
   }
 
   if (isWeekend(today)) return null;
   return today.getDay(); // Date#getDay(): Mon=1 … Fri=5
 }
 
-/** Working days since the anchor was set — 0 if today IS the anchor date.
- *  A large value means the anchor has been silently projecting forward for a
- *  while with no way to know whether a holiday desynced it in between. */
+/** Working days since the anchor was set — 0 if today IS the anchor date,
+ *  negative for a date before it (see workingDaysBetweenExclusive).
+ *  A large positive value means the anchor has been silently projecting
+ *  forward for a while with no way to know whether a holiday desynced it. */
 export function workingDaysSinceAnchor(anchor: DayOrderAnchor, today: Date): number {
   return workingDaysBetweenExclusive(parseDateKey(anchor.date), today);
 }

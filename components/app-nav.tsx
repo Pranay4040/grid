@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { GlassPanel } from "@/components/glass";
 
 type NavItem = { href: string; label: string };
 
@@ -11,16 +10,14 @@ type NavItem = { href: string; label: string };
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Overview" },
   { href: "/attendance", label: "Attendance" },
+  { href: "/courses", label: "Courses" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/marks", label: "Marks" },
   { href: "/gpa", label: "GPA" },
 ];
 
-/**
- * Sized for pages that don't exist yet (see ROADMAP.md). Timetable is
- * deliberately NOT here — it already lives on Overview, it's just not a
- * separate tab yet, so labeling it "soon" would misrepresent it.
- */
-const SOON_ITEMS = ["Courses", "Calendar"];
+/** Sized for pages that don't exist yet (see ROADMAP.md). */
+const SOON_ITEMS: string[] = [];
 
 function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -28,61 +25,30 @@ function isActive(pathname: string, href: string): boolean {
 
 function SoonTag() {
   return (
-    <span className="rounded-full bg-[var(--glass-hover)] px-1.5 py-0.5 text-[0.6rem] font-medium tracking-wide text-faint uppercase">
+    <span className="rounded-full bg-[var(--panel-hover)] px-1.5 py-0.5 text-[0.6rem] font-medium tracking-wide text-faint uppercase">
       Soon
     </span>
   );
 }
 
-export function AppNav({ variant }: { variant: "sidebar" | "tabs" }) {
+/** Plain link list — lives inside the hamburger menu popover (see nav-menu.tsx). */
+export function AppNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
-  if (variant === "sidebar") {
-    return (
-      <GlassPanel className="hidden h-fit w-52 shrink-0 flex-col gap-1 p-2 lg:flex">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                active
-                  ? "bg-[var(--accent-soft)] text-accent"
-                  : "text-muted hover:bg-[var(--glass-hover)] hover:text-foreground",
-              )}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-        {SOON_ITEMS.map((label) => (
-          <span
-            key={label}
-            className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-faint"
-          >
-            {label}
-            <SoonTag />
-          </span>
-        ))}
-      </GlassPanel>
-    );
-  }
-
   return (
-    <GlassPanel className="flex gap-1 overflow-x-auto p-2 lg:hidden">
+    <nav className="flex flex-col gap-0.5">
       {NAV_ITEMS.map((item) => {
         const active = isActive(pathname, item.href);
         return (
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={clsx(
-              "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+              "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
               active
                 ? "bg-[var(--accent-soft)] text-accent"
-                : "text-muted hover:bg-[var(--glass-hover)] hover:text-foreground",
+                : "text-muted hover:bg-[var(--panel-hover)] hover:text-foreground",
             )}
           >
             {item.label}
@@ -92,12 +58,12 @@ export function AppNav({ variant }: { variant: "sidebar" | "tabs" }) {
       {SOON_ITEMS.map((label) => (
         <span
           key={label}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-faint"
+          className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-faint"
         >
           {label}
           <SoonTag />
         </span>
       ))}
-    </GlassPanel>
+    </nav>
   );
 }

@@ -1,4 +1,4 @@
-import { StatTile } from "@/components/glass";
+import { StatTile } from "@/components/panel";
 import { TimetableView } from "@/components/timetable-view";
 import { NotConnected } from "@/components/not-connected";
 import { getDashboard } from "@/lib/academia/dashboard";
@@ -14,7 +14,7 @@ export default async function Home() {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-wrap gap-3">
         <StatTile label="Courses" value={summary.courseCount} hint="Registered" tone="accent" />
         <StatTile label="Credits" value={summary.totalCredits} hint="This semester" tone="neutral" />
       </div>

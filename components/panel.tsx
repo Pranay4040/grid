@@ -2,21 +2,17 @@ import { clsx } from "clsx";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 type PanelProps = ComponentPropsWithoutRef<"div"> & {
-  /** Denser frost — for surfaces sitting above other glass. */
-  strong?: boolean;
+  /** Slightly lighter surface — for elements that need to stand out above
+   *  other panels (the nav menu popover, sticky table headers). */
+  raised?: boolean;
 };
 
-export function GlassPanel({
-  strong = false,
-  className,
-  children,
-  ...rest
-}: PanelProps) {
+export function Panel({ raised = false, className, children, ...rest }: PanelProps) {
   return (
     <div
       className={clsx(
-        strong ? "glass-strong" : "glass",
-        "glass-edge rounded-2xl",
+        raised ? "bg-[var(--surface-raised)]" : "bg-[var(--surface)]",
+        "rounded-2xl border border-[var(--line)]",
         className,
       )}
       {...rest}
@@ -27,8 +23,8 @@ export function GlassPanel({
 }
 
 /**
- * Semantic tones only — never a literal hue. `accent` follows the active
- * theme; the status tones stay meaningful across every palette.
+ * Semantic tones only — never a literal hue. `accent` follows the theme;
+ * the status tones stay meaningful regardless.
  */
 export type Tone = "accent" | "success" | "warn" | "danger" | "neutral";
 
@@ -56,13 +52,13 @@ export function StatTile({
   tone = "accent",
 }: StatTileProps) {
   return (
-    <GlassPanel className="p-5">
+    <Panel className="w-full min-w-[9.5rem] flex-1 p-4 sm:w-52 sm:flex-none sm:p-5">
       <p className="text-[0.7rem] font-medium tracking-[0.14em] text-muted uppercase">
         {label}
       </p>
-      <p className="mt-3 flex items-baseline gap-1">
+      <p className="mt-2 flex items-baseline gap-1">
         <span
-          className={clsx("text-4xl font-semibold tabular-nums", TONE_TEXT[tone])}
+          className={clsx("text-3xl font-semibold tabular-nums", TONE_TEXT[tone])}
         >
           {value}
         </span>
@@ -73,6 +69,6 @@ export function StatTile({
         ) : null}
       </p>
       {hint ? <p className="mt-1 text-sm text-muted">{hint}</p> : null}
-    </GlassPanel>
+    </Panel>
   );
 }

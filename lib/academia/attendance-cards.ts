@@ -5,7 +5,7 @@
  * which planAttendance() deliberately omits since there's nothing to plan
  * for them yet.
  */
-import type { Tone } from "@/components/glass";
+import type { Tone } from "@/components/panel";
 import { planAttendance, type AttendancePlan, type PlanStatus } from "./attendance-planner";
 import type { AttendanceRow } from "./data-types";
 

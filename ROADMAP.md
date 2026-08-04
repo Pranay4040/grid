@@ -117,29 +117,131 @@ Living checklist across every part of the app. Checked items are shipped on
 
 ## Theming / UI system
 
-- [ ] De-duplicate palette hues: `SWATCH` in `components/theme-switcher.tsx`
-      vs `--t*` in `app/globals.css` currently must be kept in sync by hand.
+- [x] **Dropped the 6-palette × light/dark glassmorphism system for one fixed
+      flat theme.** The glass surfaces (`backdrop-filter` blur, gradient field,
+      grain texture) and the palette/mode switcher read as visually
+      inconsistent — especially once the Marks/GPA tables became dense,
+      information-heavy cards sitting on frosted panels — and the multi-theme
+      surface area (6 hues × 2 modes = 12 combinations to keep coherent) wasn't
+      earning its cost. Replaced with a single fixed dark palette matching
+      `/welcome`'s landing-page design (`--bg #0d0d11`, `--surface #141419`,
+      `--accent #b6b2f2`) — solid opaque panels, no blur, no animated
+      background. `components/theme.tsx` and `components/theme-switcher.tsx`
+      deleted; `components/glass.tsx` → `components/panel.tsx`
+      (`GlassPanel` → `Panel`, `strong` prop → `raised`). Semantic token
+      *names* (`--accent`, `--success`, `--line`, `text-muted`, etc.) are
+      unchanged, so every component's `className` strings kept working — only
+      `app/globals.css`'s token *values* and the handful of `--glass-*`-named
+      tokens (`--panel-hover`, `--surface-raised`) changed. If a future palette
+      returns, `app/globals.css` is still the one place to edit.
 - [ ] Extend the shared motion/polish system from the timetable to the rest
       of the dashboard (stat tiles, attendance list, header).
 
 ## Navigation
 
-- [x] Real app shell: shared header + sidebar (desktop) / horizontal tab row
-      (mobile), built via a Next.js route group (`app/(app)/`) so `/login`
-      stays outside it. `components/app-header.tsx`, `components/app-nav.tsx`
-      (the only client-side nav piece — active-tab highlighting via
-      `usePathname()`), `app/(app)/layout.tsx`. Sized to hold future tabs:
-      Courses/Calendar show as disabled "Soon" placeholders; Marks and GPA
-      graduated to real nav entries once those pages shipped.
-      `loading.tsx` skeletons on both routes (`components/skeleton.tsx`) so
-      the real Academia fetch latency (a few seconds) shows a skeleton
-      instead of feeling like a stall.
-- [ ] Give Timetable and the rest of the placeholder pages their own tabs
-      once they're built — Timetable currently still lives on Overview.
+- [x] Real app shell, built via a Next.js route group (`app/(app)/`) so
+      `/login` stays outside it. `components/app-header.tsx`,
+      `app/(app)/layout.tsx`. `loading.tsx` skeletons on every route
+      (`components/skeleton.tsx`) so the real Academia fetch latency (a few
+      seconds) shows a skeleton instead of feeling like a stall.
+- [x] **Nav consolidated into one hamburger menu** (`components/nav-menu.tsx`)
+      at every viewport size — replaced the earlier persistent
+      sidebar (desktop) / tab row (mobile) / always-visible theme switcher,
+      which read as cluttered and inconsistent, especially alongside the
+      wide Marks/GPA tables. One compact trigger in the header (leftmost,
+      before the brand name) opens a popover with nav links
+      (`components/app-nav.tsx`, now a plain list, no sidebar/tabs variants)
+      and logout — closes on outside click, `Escape`, or navigating. Fixed a
+      real z-index bug along the way: every `Panel` gets its own stacking
+      context from (the now-removed) `backdrop-filter`, so the header needed
+      `relative z-40` itself or its popover painted *underneath* later
+      static content regardless of its own `z-50`. Sized to hold future
+      tabs: Courses/Calendar show as disabled "Soon" placeholders; Marks and
+      GPA graduated to real nav entries once those pages shipped. The
+      "Appearance" section (theme switcher) was removed from this menu when
+      the palette system was dropped — see Theming / UI system.
+- [x] **Marks/GPA tables rebuilt as card lists** — the original dense
+      `<table>` layouts needed horizontal scrolling to read on anything
+      narrower than ~52rem, which was the #1 complaint. `components/marks-table.tsx`
+      and `components/gpa-table.tsx` now use the same card-list pattern as
+      `attendance-cards.tsx` (one `Panel` + `<li>` per course), so
+      every screen size reads top-to-bottom with zero horizontal scroll.
+- [x] **Courses and Calendar graduated from "Soon" placeholders to real nav
+      entries** once those pages shipped. `SOON_ITEMS` in
+      `components/app-nav.tsx` is now empty — the menu holds six real links
+      (Overview, Attendance, Courses, Calendar, Marks, GPA). Keep the
+      placeholder mechanism around for whatever lands next.
+- [ ] Give Timetable its own tab — it currently still lives on Overview.
+
+## Courses
+
+- [x] **Courses page** (`/courses`) — the full registration record Academia
+      holds per course, which nothing else in the app surfaced: credit,
+      category, course type, faculty, slot and room, joined to whatever
+      attendance has accrued. `lib/academia/courses-table.ts`
+      (`buildCourseRows()` + `summarizeCourses()`), same "nothing silently
+      vanishes" contract as `attendance-cards.ts`/`marks-table.ts` — a course
+      with no attendance still shows, and an attendance row with no matching
+      registration surfaces as a `credit: null` row rather than being dropped.
+      Theory and Practical attendance stay separate (SRM tracks them
+      independently), so a lab-based course shows both percentages. Course
+      codes are deduped — a course registered as both theory and lab appears
+      twice in the scrape but is one card. `cleanFaculty()` strips Academia's
+      trailing staff-ID tag ("Dr.Maivizhi R (103033)" → "Dr.Maivizhi R") only
+      when it's that all-digit suffix, never a real parenthetical. Header
+      chips break credits down by category. Verified: 28/28 checks in
+      `scripts/verify-courses-table.ts`, plus live confirmation (8 courses,
+      21 credits).
+- [ ] Per-course detail drill-down (syllabus, unit breakdown) — needs a data
+      source we don't have yet.
+
+## Calendar
+
+- [x] **Calendar page** (`/calendar`) — month grid projecting the day-order
+      rotation across real dates, with per-date class counts and a
+      click-through day detail listing that day's classes and times.
+      `lib/timetable/calendar.ts` (`buildCalendarMonth()`). Monday-first weeks,
+      trailing all-padding rows dropped. Reuses the timetable's customization
+      overlay, so classes removed/added/marked optional there are reflected
+      here too.
+- [x] **Fixed a real day-order bug this surfaced.** `resolveDayOrder()`
+      counted working days with an *unsigned* helper, so for any date BEFORE
+      the anchor it returned 0 and reported the anchor's own day-order.
+      The Today view never hit this (its anchor is always ≤ today), but a
+      month grid hits it on every render — every past weekday showed the wrong
+      day order. `workingDaysBetweenExclusive()` is now signed, and
+      `resolveDayOrder()` uses a floored modulo so backward projection doesn't
+      land outside 1-5. Verified: 37/37 checks in `scripts/verify-calendar.ts`,
+      which pins forward, backward, across-weekend, and full-cycle projection.
+- [ ] **Holidays are still unknowable.** Every day-order on this page is
+      projected from the manual anchor — Academia exposes no academic calendar
+      to this account (see the Timetable section), so the projection silently
+      drifts after any holiday the rotation skips. The page says so plainly
+      rather than implying the dates are authoritative, and flags when today's
+      own day-order is a guess or a long-unconfirmed anchor. Revisit only if
+      SRM ever exposes a real calendar.
+- [ ] Calendar export (`.ics`) — see the Timetable section; the projection
+      caveat above applies doubly to anything exported into a real calendar app.
 
 ## Study-material library
 
 - [ ] Scope this out — the intended differentiator vs. PortalX.
+
+## Marketing
+
+- [x] Public landing hero at `/welcome` (`app/welcome/page.tsx`) — separate
+      from the authenticated app shell, deliberately its own standalone
+      design system (own color tokens, not the app's semantic theme/palette
+      switcher — a one-off marketing page doesn't need to match the
+      dashboard). 16:9 grid composition on desktop (fits one viewport, no
+      scroll), normal document flow below 1024px. Hamburger menu with a
+      full focus trap, body-scroll lock, and `inert` when closed. Full
+      motion system (page-load choreography, scroll-reveal on the product
+      preview, `prefers-reduced-motion` support). Not yet wired into the
+      app's actual entry flow — `/` still goes straight to the authenticated
+      dashboard (or `<NotConnected>`) regardless of login state; deciding
+      how unauthenticated visitors reach `/welcome` vs. `/login` is a
+      follow-up.
 
 ## Auth
 

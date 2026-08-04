@@ -83,6 +83,20 @@ function makeAnchorStore(key: string) {
 const anchorStore = makeAnchorStore(STORAGE_DAY_ANCHOR);
 
 /**
+ * The raw stored anchor. `useTodayDayOrder` resolves it for today specifically;
+ * this is for callers that project day-orders across OTHER dates — the calendar
+ * month grid, which needs to run resolveDayOrder() per cell rather than for a
+ * single "now". Returns null when the student has never confirmed a day-order.
+ */
+export function useDayOrderAnchor(): DayOrderAnchor | null {
+  return useSyncExternalStore(
+    anchorStore.subscribe,
+    anchorStore.getSnapshot,
+    anchorStore.getServerSnapshot,
+  );
+}
+
+/**
  * Today's resolved day-order plus a way to correct it (e.g. the rotation
  * skipped a day for a holiday). `now` is passed in rather than read from
  * `Date.now()` here so the caller owns the ticking clock; pass `null` before

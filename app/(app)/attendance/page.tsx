@@ -1,4 +1,4 @@
-import { StatTile } from "@/components/glass";
+import { StatTile } from "@/components/panel";
 import { AttendanceCards } from "@/components/attendance-cards";
 import { NotConnected } from "@/components/not-connected";
 import { getDashboard } from "@/lib/academia/dashboard";
@@ -21,7 +21,7 @@ export default async function AttendancePage() {
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-wrap gap-3">
         <StatTile
           label="Attendance"
           value={summary.avgAttendance == null ? "—" : summary.avgAttendance.toFixed(0)}

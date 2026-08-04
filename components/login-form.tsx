@@ -8,7 +8,7 @@ import { loginAction, type LoginState } from "@/app/login/actions";
 const RESET_HINT_THRESHOLD = 3;
 
 const fieldClass =
-  "rounded-lg border border-[var(--line)] bg-[var(--glass-bg)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--accent)]";
+  "rounded-lg border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--accent)]";
 const labelClass = "grid gap-1 text-sm";
 const captionClass = "text-xs font-medium text-muted";
 
