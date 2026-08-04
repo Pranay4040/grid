@@ -136,7 +136,7 @@ function SubjectCard({
     <li className="rounded-xl border border-[var(--line)] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{subject.title}</p>
+          <p className="line-clamp-2 text-sm font-medium">{subject.title}</p>
           <p className="mt-0.5 text-xs text-muted">
             <span className="font-mono">{subject.code}</span> · {subject.credit} cr
           </p>

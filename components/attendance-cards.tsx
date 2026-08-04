@@ -57,7 +57,7 @@ export function AttendanceCards({ rows }: { rows: AttendanceRow[] }) {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{row.title}</p>
+                    <p className="line-clamp-2 text-sm font-medium">{row.title}</p>
                     <p className="truncate text-xs">
                       <span className="font-mono">{row.code}</span> · {row.category}
                     </p>
@@ -84,7 +84,7 @@ export function AttendanceCards({ rows }: { rows: AttendanceRow[] }) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{plan.title}</p>
+                  <p className="line-clamp-2 text-sm font-medium">{plan.title}</p>
                   <p className="truncate text-xs text-muted">
                     <span className="font-mono">{plan.code}</span> · {plan.category}
                   </p>

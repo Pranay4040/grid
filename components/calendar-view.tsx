@@ -89,7 +89,7 @@ export function CalendarView({ week }: { week: WeekSchedule }) {
               type="button"
               onClick={() => setMonthOffset((o) => o - 1)}
               aria-label="Previous month"
-              className="size-8 rounded-lg text-muted transition-colors hover:bg-[var(--panel-hover)] hover:text-foreground"
+              className="size-9 rounded-lg text-muted transition-colors hover:bg-[var(--panel-hover)] hover:text-foreground"
             >
               ‹
             </button>
@@ -110,7 +110,7 @@ export function CalendarView({ week }: { week: WeekSchedule }) {
               type="button"
               onClick={() => setMonthOffset((o) => o + 1)}
               aria-label="Next month"
-              className="size-8 rounded-lg text-muted transition-colors hover:bg-[var(--panel-hover)] hover:text-foreground"
+              className="size-9 rounded-lg text-muted transition-colors hover:bg-[var(--panel-hover)] hover:text-foreground"
             >
               ›
             </button>
@@ -254,7 +254,7 @@ export function CalendarView({ week }: { week: WeekSchedule }) {
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{c.course.title}</p>
+                      <p className="line-clamp-2 text-sm font-medium">{c.course.title}</p>
                       <p className="mt-0.5 truncate text-xs text-muted">
                         {c.course.code ? (
                           <span className="font-mono">{c.course.code}</span>

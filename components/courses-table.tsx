@@ -81,7 +81,7 @@ export function CoursesTable({
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium" title={r.title}>
+                <p className="line-clamp-2 text-sm font-medium" title={r.title}>
                   {r.title || <span className="text-faint">—</span>}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-muted">

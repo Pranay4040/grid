@@ -34,7 +34,7 @@ export function MarksTable({ rows }: { rows: MarksRow[] }) {
           <li key={r.code} className="rounded-xl border border-[var(--line)] p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
+                <p className="line-clamp-2 text-sm font-medium">
                   {r.title || <span className="text-faint">—</span>}
                 </p>
                 <p className="mt-0.5 truncate text-xs text-muted">

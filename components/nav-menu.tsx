@@ -42,7 +42,7 @@ export function NavMenu({ connected }: { connected: boolean }) {
         aria-controls="nav-menu-panel"
         aria-label={open ? "Close menu" : "Open menu"}
         className={clsx(
-          "flex size-9 items-center justify-center rounded-lg text-lg leading-none transition-colors",
+          "flex size-10 items-center justify-center rounded-lg text-lg leading-none transition-colors",
           open
             ? "bg-[var(--accent-soft)] text-accent"
             : "text-muted hover:bg-[var(--panel-hover)] hover:text-foreground",
