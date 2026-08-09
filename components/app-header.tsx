@@ -12,9 +12,7 @@ export function AppHeader({ result }: { result: DashboardResult }) {
     <Panel className="relative z-40 flex items-center gap-4 p-4 sm:p-5">
       <NavMenu connected={result.ok} />
       <div className="min-w-0">
-        <p className="text-lg font-semibold tracking-tight">
-          Portal<span className="text-accent">Free</span>
-        </p>
+        <p className="text-lg font-semibold tracking-tight text-accent">Grid</p>
         {result.ok ? (
           <p className="mt-0.5 truncate text-sm text-muted">
             {result.data.student.name} · {result.data.student.program}{" "}

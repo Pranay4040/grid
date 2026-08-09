@@ -3,11 +3,24 @@ import { getTimetable } from "../lib/academia/data";
 import { loadSession } from "../lib/academia/session-store";
 import { buildSchedule, to12h } from "../lib/academia/timetable-grid";
 
+// NOTE: this script needs a LIVE session (npx tsx scripts/save-session.ts).
+// It sets process.exitCode rather than calling process.exit(): exiting while
+// the fetch's handles are still closing trips a libuv assertion on Windows and
+// reports 127 ("command not found"), which reads like a broken script rather
+// than an expired session.
 async function main() {
   const session = loadSession();
-  if (!session) { console.error("No session"); process.exit(1); }
+  if (!session) {
+    console.error("No session — run: npx tsx scripts/save-session.ts");
+    process.exitCode = 1;
+    return;
+  }
   const tt = await getTimetable(authedFetch(session));
-  if (!tt) { console.error("No timetable"); process.exit(1); }
+  if (!tt) {
+    console.error("No timetable — the saved session has expired. Re-run: npx tsx scripts/save-session.ts");
+    process.exitCode = 1;
+    return;
+  }
   const batch = tt.student.batch?.match(/\d+/)?.[0] ?? "1";
   console.log("batch:", batch, "| courses:", tt.courses.length);
   const week = buildSchedule(tt.courses, batch);
@@ -20,4 +33,4 @@ async function main() {
   }
   console.log("\nunplaced (L-slot labs):", week.unplaced.map(c => `${c.code}[${c.slot}]`).join(", ") || "none");
 }
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => { console.error(e); process.exitCode = 1; });

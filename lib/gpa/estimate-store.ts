@@ -4,7 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import { makeJsonStore } from "@/lib/store/json-store";
 import type { EstimateMap, SubjectEstimate } from "@/lib/academia/gpa";
 
-export const STORAGE_ESTIMATES = "pf.gpa.estimates";
+export const STORAGE_ESTIMATES = "grid.gpa.estimates";
 
 function isSubjectEstimate(v: unknown): v is SubjectEstimate {
   if (!v || typeof v !== "object") return false;

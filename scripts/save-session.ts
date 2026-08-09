@@ -3,8 +3,8 @@
  * bundle (never your password) so Claude can drive discovery/parsing without
  * ever handling your credentials.
  *
- *   cd C:\Users\prana\Desktop\timetable_test1
- *   $env:SRM_USER="pp7136@srmist.edu.in"; $env:SRM_PASS="<pw>"; npx tsx scripts/save-session.ts
+ *   cd <your-clone-of-this-repo>
+ *   $env:SRM_USER="ab1234@srmist.edu.in"; $env:SRM_PASS="<pw>"; npx tsx scripts/save-session.ts
  *   $env:SRM_PASS=$null
  *
  * Writes scripts/.session.json (gitignored). Each successful dashboard load
@@ -21,7 +21,7 @@ async function main() {
   const pass = process.env.SRM_PASS;
   if (!user || !pass) {
     console.error(
-      'Set creds first: $env:SRM_USER="pp7136@srmist.edu.in"; $env:SRM_PASS="<pw>"',
+      'Set creds first: $env:SRM_USER="ab1234@srmist.edu.in"; $env:SRM_PASS="<pw>"',
     );
     process.exit(1);
   }

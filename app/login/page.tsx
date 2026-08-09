@@ -18,9 +18,7 @@ export default async function LoginPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 p-4 sm:p-6">
       <Panel className="p-5 sm:p-6">
-        <p className="text-lg font-semibold tracking-tight">
-          Portal<span className="text-accent">Free</span>
-        </p>
+        <p className="text-lg font-semibold tracking-tight text-accent">Grid</p>
       </Panel>
 
       <Panel className="p-6 sm:p-8">

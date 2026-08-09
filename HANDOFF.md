@@ -134,7 +134,9 @@ context from `backdrop-filter` (pre-redesign), so the header needed
 **`ui-revamp-courses-calendar`** (branched off `master` at `d8cb968`).
 
 **Not yet merged to `master`, and not pushed.** Remote is
-`github.com/Pranay4040/portalfree`. Merging is a fast-forward:
+`github.com/Pranay4040/portalfree` — **repo still carries the old name**; the
+app was renamed PortalFree → Grid but renaming the GitHub repo (and the Vercel
+project) is a dashboard action the user has to do. Merging is a fast-forward:
 `git checkout master && git merge ui-revamp-courses-calendar`.
 
 User intends to make the repo **public** and deploy to **Vercel**. Set

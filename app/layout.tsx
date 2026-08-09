@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PortalFree — SRM Academic Companion",
+  title: "Grid — SRM Academic Companion",
   description:
     "A free, open academic companion for SRM students. Unofficial and not affiliated with SRM Institute of Science and Technology.",
 };

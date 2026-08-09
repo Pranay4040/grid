@@ -17,7 +17,7 @@ import {
  *  if a holiday desynced it. "guess": no anchor at all, bare weekday guess. */
 export type DayOrderSource = "anchor" | "unconfirmed" | "guess";
 
-export const STORAGE_DAY_ANCHOR = "pf.timetable.dayAnchor";
+export const STORAGE_DAY_ANCHOR = "grid.timetable.dayAnchor";
 
 /* Same external-store shape as components/theme.tsx: localStorage is read
    through useSyncExternalStore (with a cached snapshot + cross-tab sync)

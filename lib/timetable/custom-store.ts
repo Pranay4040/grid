@@ -8,8 +8,8 @@ import {
 } from "@/lib/academia/timetable-grid";
 import { makeJsonStore } from "@/lib/store/json-store";
 
-export const STORAGE_CUSTOM = "pf.timetable.custom";
-export const STORAGE_VIEW = "pf.timetable.view";
+export const STORAGE_CUSTOM = "grid.timetable.custom";
+export const STORAGE_VIEW = "grid.timetable.view";
 
 function isCustom(v: unknown): v is TimetableCustom {
   if (!v || typeof v !== "object") return false;

@@ -1,8 +1,8 @@
 /**
  * LOCAL, USER-RUN data-endpoint discovery. Do NOT run in a shared session.
  *
- *   cd C:\Users\prana\Desktop\timetable_test1
- *   $env:SRM_USER="pp7136@srmist.edu.in"; $env:SRM_PASS="<pw>"; npx tsx scripts/discover-data.ts
+ *   cd <your-clone-of-this-repo>
+ *   $env:SRM_USER="ab1234@srmist.edu.in"; $env:SRM_PASS="<pw>"; npx tsx scripts/discover-data.ts
  *   $env:SRM_PASS=$null
  *
  * Purpose: find WHICH Zoho Creator pages hold attendance / marks / timetable,

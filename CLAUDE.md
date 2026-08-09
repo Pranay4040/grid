@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# PortalFree — free SRM academic companion
+# Grid — free SRM academic companion
 
 Free replacement for the paywalled PortalX. Logs into SRM Academia, shows
 timetable/attendance/marks/courses in a flat, minimal UI. Unofficial.

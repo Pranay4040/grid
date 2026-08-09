@@ -1,4 +1,4 @@
-# PortalFree Roadmap
+# Grid Roadmap
 
 Living checklist across every part of the app. Checked items are shipped on
 `main`; unchecked items are scoped but not yet built. See

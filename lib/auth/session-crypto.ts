@@ -41,8 +41,11 @@ const IV_BYTES = 12; // 96-bit nonce, the GCM standard
 const TAG_BYTES = 16;
 
 /** Domain-separation label for HKDF — keeps this key distinct from any other
- *  key ever derived from the same secret. */
-const HKDF_INFO = "portalfree.session.v1";
+ *  key ever derived from the same secret. Changing this string changes the
+ *  derived key, which invalidates every existing session cookie. Treat it as
+ *  frozen now that the app is public; rotate SESSION_SECRET instead if you
+ *  ever need a global sign-out. */
+const HKDF_INFO = "grid.session.v1";
 
 /**
  * Below this, a secret is too weak to be worth encrypting with. 32 chars is

@@ -47,7 +47,7 @@ export function LoginForm() {
           autoComplete="username"
           autoFocus
           required
-          placeholder="pp7136 or pp7136@srmist.edu.in"
+          placeholder="ab1234 or ab1234@srmist.edu.in"
           className={fieldClass}
         />
       </label>
@@ -96,7 +96,7 @@ export function LoginForm() {
         copy of it. Signing out deletes it.
       </p>
       <p className="text-xs text-faint">
-        PortalFree is unofficial and not affiliated with or endorsed by SRM
+        Grid is unofficial and not affiliated with or endorsed by SRM
         Institute of Science and Technology.
       </p>
     </form>
