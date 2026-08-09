@@ -8,6 +8,7 @@ import "server-only";
 import { cache } from "react";
 import { authedFetch } from "./client";
 import { getAttendance, getTimetable } from "./data";
+import { uniqueCourses } from "./courses-table";
 import { readSession, sessionSecretMissing } from "../auth/session-cookie";
 import { buildSchedule, type WeekSchedule } from "./timetable-grid";
 import { ATTENDANCE_THRESHOLD } from "./attendance-planner";
@@ -93,6 +94,14 @@ export async function loadDashboard(): Promise<DashboardResult> {
     const batch = (timetable.student.batch || attendance.student.batch).match(/\d+/)?.[0] ?? "1";
     const week = buildSchedule(timetable.courses, batch);
 
+    // Deduped for the headline counts. `timetable.courses` lists a lab-based
+    // course once per registration (theory + lab), both rows carrying the same
+    // credit — so counting the raw list reported 9 courses / 25 credits while
+    // the Courses, Marks and GPA pages all said 8 / 21. Same data, two
+    // answers, on the same screen. buildSchedule() above still gets the RAW
+    // list, because it needs every slot registration to place classes.
+    const registered = uniqueCourses(timetable.courses);
+
     // Attendance average over courses that have actually met.
     const conducted = attendance.rows.filter((r) => r.hoursConducted > 0);
     const avgAttendance = conducted.length
@@ -113,8 +122,8 @@ export async function loadDashboard(): Promise<DashboardResult> {
         attendance,
         week,
         summary: {
-          courseCount: timetable.courses.length,
-          totalCredits: timetable.courses.reduce((s, c) => s + c.credit, 0),
+          courseCount: registered.length,
+          totalCredits: registered.reduce((s, c) => s + c.credit, 0),
           avgAttendance,
           belowThreshold,
           batch,

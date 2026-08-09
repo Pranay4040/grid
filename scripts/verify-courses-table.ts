@@ -9,6 +9,7 @@ import {
   buildCourseRows,
   cleanFaculty,
   summarizeCourses,
+  uniqueCourses,
 } from "../lib/academia/courses-table";
 import type { AttendanceRow, Course } from "../lib/academia/data-types";
 
@@ -146,6 +147,53 @@ check("trims surrounding space", cleanFaculty("  Dr. Y (12)  "), "Dr. Y");
   check("orphan adds no credits", s.totalCredits, 4);
   check("orphan invents no category bucket", s.byCategory.length, 1);
 }
+
+// --- uniqueCourses: the Overview count regression ----------------------------
+// A lab-based course is registered twice (theory + lab), both entries carrying
+// the same credit. The Overview stat tiles summed the raw list and reported
+// 9 courses / 25 credits while Courses, Marks and GPA all said 8 / 21 — two
+// different answers to the same question, on the same screen.
+
+{
+  const raw = [
+    course("21CSC302J", { credit: 4 }), // theory registration
+    course("21CSC302J", { credit: 4 }), // lab registration, same course
+    course("21MAB302T", { credit: 4 }),
+    course("21CSC301T", { credit: 3 }),
+  ];
+
+  check("raw list double-counts the course", raw.length, 4);
+  check(
+    "raw list double-counts its credits",
+    raw.reduce((s, c) => s + c.credit, 0),
+    15,
+  );
+
+  const unique = uniqueCourses(raw);
+  check("deduped course count", unique.length, 3);
+  check("deduped credit total", unique.reduce((s, c) => s + c.credit, 0), 11);
+  check("first registration is the one kept", unique[0].code, "21CSC302J");
+  check(
+    "order otherwise preserved",
+    unique.map((c) => c.code),
+    ["21CSC302J", "21MAB302T", "21CSC301T"],
+  );
+
+  // The headline count MUST agree with what the Courses page renders.
+  check(
+    "uniqueCourses agrees with buildCourseRows",
+    unique.length,
+    buildCourseRows(raw, []).length,
+  );
+  check(
+    "credit total agrees with summarizeCourses",
+    unique.reduce((s, c) => s + c.credit, 0),
+    summarizeCourses(buildCourseRows(raw, [])).totalCredits,
+  );
+}
+
+check("uniqueCourses on empty input", uniqueCourses([]).length, 0);
+check("uniqueCourses leaves an already-unique list alone", uniqueCourses([course("A"), course("B")]).length, 2);
 
 // --- empty --------------------------------------------------------------------
 

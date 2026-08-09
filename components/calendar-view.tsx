@@ -142,7 +142,11 @@ export function CalendarView({ week }: { week: WeekSchedule }) {
                     aria-label={`${cell.dateKey}${cell.dayOrder ? `, day order ${cell.dayOrder}` : ""}`}
                     aria-pressed={isSelected}
                     className={clsx(
-                      "flex aspect-square flex-col items-center justify-center rounded-lg border p-1 transition-colors",
+                      // Fixed height, NOT aspect-square: squares are fine on a
+                      // phone (~48px) but on a wide screen each cell became
+                      // ~150px tall holding three short lines, which is the
+                      // exact wasted space this UI was reworked to remove.
+                      "flex min-h-12 flex-col items-center justify-center rounded-lg border p-1 transition-colors sm:min-h-14",
                       !cell.inMonth && "opacity-30",
                       isSelected
                         ? "border-[var(--accent)] bg-[var(--accent-soft)]"

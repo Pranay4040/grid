@@ -51,6 +51,27 @@ export function cleanFaculty(raw: string): string {
   return raw.replace(/\s*\(\d+\)\s*$/, "").trim();
 }
 
+/**
+ * Registered courses deduped by code.
+ *
+ * A course registered as both theory and lab (e.g. a "Lab Based Theory"
+ * course) appears TWICE in the scrape, and both entries carry the same credit
+ * value — so summing the raw list both over-counts the course and
+ * double-counts its credits. Anything reporting "how many courses / how many
+ * credits" must go through this, or it will disagree with the Courses, Marks
+ * and GPA pages, which all dedupe.
+ */
+export function uniqueCourses(courses: Course[]): Course[] {
+  const seen = new Set<string>();
+  const out: Course[] = [];
+  for (const c of courses) {
+    if (seen.has(c.code)) continue;
+    seen.add(c.code);
+    out.push(c);
+  }
+  return out;
+}
+
 export function buildCourseRows(
   courses: Course[],
   attendance: AttendanceRow[],
