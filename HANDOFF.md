@@ -129,33 +129,42 @@ context from `backdrop-filter` (pre-redesign), so the header needed
 
 ## Current state
 
-`npx tsc --noEmit`, `npx eslint .`, `npx next build`, and all **13**
-`scripts/verify-*.ts` (exit 0) are green. Work sits on branch
-**`ui-revamp-courses-calendar`** (branched off `master` at `d8cb968`).
+`npx tsc --noEmit`, `npx eslint .` and `npx next build` are clean. Of the 14
+`scripts/verify-*.ts`, **12 exit 0**; `verify-grid.ts` and `verify-parse.ts`
+need a LIVE Academia session (`npx tsx scripts/save-session.ts`) and report
+honestly when it's expired — that's environment, not a regression.
 
-**Not yet merged to `master`, and not pushed.** Remote is
-`github.com/Pranay4040/portalfree` — **repo still carries the old name**; the
-app was renamed PortalFree → Grid but renaming the GitHub repo (and the Vercel
-project) is a dashboard action the user has to do. Merging is a fast-forward:
-`git checkout master && git merge ui-revamp-courses-calendar`.
+Everything is **merged to `master` and pushed**. Remote is
+`github.com/Pranay4040/grid` (renamed from `portalfree` via `gh repo rename`;
+local `origin` already updated). The branch `ui-revamp-courses-calendar` is
+merged and can be deleted.
 
-User intends to make the repo **public** and deploy to **Vercel**. Set
-`SESSION_SECRET` in the Vercel project first — the app is inert without it.
+**Repo is still PRIVATE.** Making it public is the user's call and was
+deliberately not done automatically — it's hard to walk back once cloned or
+cached. Personal data was scrubbed first (the login placeholder held the
+author's real NetID/SRM email; two scripts held the same email plus an
+absolute path exposing their Windows username), so it's *safe* to flip when
+they choose.
+
+**Not deployed yet.** Vercel and Upstash setup are dashboard/account actions
+that must be done by the user — no CLI path exists here (`vercel` isn't
+installed and its login needs interactive browser OAuth). Required:
+`SESSION_SECRET` in Vercel env vars (app is inert without it, reporting
+`misconfigured`), production branch set to `master` not `main`, and optionally
+the two `UPSTASH_REDIS_REST_*` vars to activate login rate limiting.
 
 ## Next up (unstarted, pick one)
 
 1. User has a queue of **minor UI tweaks** they said they'd request one at a
    time — expect those first.
-2. Rate-limit `/login` before real public traffic (see Auth in ROADMAP.md).
 2. Decide `/welcome`'s real placement (redirect unauth visitors there? new
    route?) — still orphaned; `/` goes straight to the dashboard regardless of
-   login state.
-3. Multi-user/public auth + server-side encrypted session store — the big
-   deferred step, and the blocker for any public release.
-4. Study-material library — unscoped differentiator vs. PortalX.
-5. Smaller: Timetable still lives on Overview rather than its own tab; `.ics`
+   login state. Matters more now that the app is about to be public: new
+   visitors currently land on a bare "Not connected" panel, never the hero.
+3. Study-material library — unscoped differentiator vs. PortalX.
+4. Smaller: Timetable still lives on Overview rather than its own tab; `.ics`
    export; batch slot templates beyond 1 & 2; motion polish on the remaining
-   surfaces.
+   surfaces; a per-username login limit to complement the per-IP one.
 
 **Known-blocked (not fixable by us):** real assessment data (portal has
 published none this term), holiday drift on `/calendar`, and
