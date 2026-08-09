@@ -16,12 +16,14 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { isExpired, SESSION_ABSOLUTE_MAX_MS } from "../academia/client";
+import { SESSION_COOKIE } from "./cookie-name";
 import { decryptSession, encryptSession, sessionSecretMissing } from "./session-crypto";
 import type { AcademiaSession } from "../academia/types";
 
-/** Renaming this logs every user out (their old cookie is simply ignored).
- *  Safe to have changed pre-launch; treat as frozen now. */
-export const SESSION_COOKIE = "grid_session";
+/** Defined in its own module so proxy.ts can share it without importing this
+ *  file's `server-only`/`next/headers` dependencies. Imported (not just
+ *  re-exported) because this module uses it locally too. */
+export { SESSION_COOKIE };
 
 export { sessionSecretMissing };
 
