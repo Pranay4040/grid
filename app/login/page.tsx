@@ -13,7 +13,10 @@ export default async function LoginPage() {
   //
   // Cheap for signed-out visitors: with no cookie there's no network call.
   const result = await getDashboard();
-  if (result.ok) redirect("/");
+  // `page_unavailable` means the session WORKS and Academia changed shape —
+  // asking for a password again would be a lie, and re-entering one changes
+  // nothing. Send those users to the app so they see what actually broke.
+  if (result.ok || result.reason === "page_unavailable") redirect("/");
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6 p-4 sm:p-6">

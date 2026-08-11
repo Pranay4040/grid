@@ -11,7 +11,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { authedFetch } from "../lib/academia/client";
-import { parseTimetable } from "../lib/academia/parse";
+import { classifyPage, parseTimetable, viewContainerNames } from "../lib/academia/parse";
 import { TIMETABLE_VIEW } from "../lib/academia/data";
 import type { AcademiaSession } from "../lib/academia/types";
 
@@ -51,10 +51,16 @@ async function main() {
 
   console.log(`HTTP status: ${res.status}`);
   console.log(`Response size: ${html.length} bytes`);
+  console.log(`Page state: ${classifyPage(html)}`);
+  console.log(`View containers present: ${viewContainerNames(html).join(", ") || "(none)"}`);
+  // "Couldn't parse" is NOT the same as "expired" — a live session on a page
+  // SRM has renamed looks identical to a dead one unless you say which it is.
   console.log(
     parsed
-      ? `RESULT: session still LIVE — parsed ${parsed.courses.length} courses.`
-      : "RESULT: session appears EXPIRED (logged-out shell, no view container found).",
+      ? `RESULT: session still LIVE — parsed ${parsed.courses.length} courses from view ${parsed.view}.`
+      : classifyPage(html) === "logged_out"
+        ? "RESULT: session EXPIRED — Academia served its sign-in shell."
+        : `RESULT: session LIVE but ${TIMETABLE_VIEW} is unreadable — portal-side change, not an expiry.`,
   );
 
   // Any cookie name not present before this call is a genuine reissue from

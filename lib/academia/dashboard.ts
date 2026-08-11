@@ -32,10 +32,16 @@ export type DashboardResult =
   | { ok: true; data: DashboardData }
   | {
       ok: false;
-      /** "misconfigured" = the DEPLOYMENT is broken (no SESSION_SECRET), not
-       *  the user's session — worth saying differently so nobody tries to fix
-       *  it by logging in again. */
-      reason: "no_session" | "session_expired" | "fetch_failed" | "misconfigured";
+      /** "misconfigured" = the DEPLOYMENT is broken (no SESSION_SECRET) and
+       *  "page_unavailable" = ACADEMIA changed under us. Neither is the user's
+       *  session, and both are worth saying differently, so nobody tries to fix
+       *  them by logging in again. */
+      reason:
+        | "no_session"
+        | "session_expired"
+        | "fetch_failed"
+        | "misconfigured"
+        | "page_unavailable";
       message: string;
     };
 
@@ -71,14 +77,31 @@ export async function loadDashboard(): Promise<DashboardResult> {
       getTimetable(fetchAs),
       getAttendance(fetchAs),
     ]);
-    if (!timetable || !attendance) {
-      // Both parsers return null specifically when the page's view container
-      // is missing — the signature of Academia serving the logged-out shell
-      // rather than real content, not a partial-parse issue.
+    if (!timetable.ok || !attendance.ok) {
+      const failed = [
+        ...(timetable.ok ? [] : [timetable]),
+        ...(attendance.ok ? [] : [attendance]),
+      ];
+
+      // Only Academia's actual sign-in shell means the session is dead. A page
+      // that rendered but carried a view we couldn't read is a PORTAL change —
+      // signing in again cannot fix it, and saying "session expired" sent
+      // people back to /login to retype a password that was never wrong.
+      if (failed.some((f) => f.reason === "logged_out")) {
+        return {
+          ok: false,
+          reason: "session_expired",
+          message: "Your Academia session expired. Sign in again to reconnect.",
+        };
+      }
+
       return {
         ok: false,
-        reason: "session_expired",
-        message: "Your Academia session expired. Sign in again to reconnect.",
+        reason: "page_unavailable",
+        message:
+          "You're signed in, but Academia didn't return the pages Grid reads. " +
+          "That's a change on the portal's side — signing in again won't help. " +
+          failed.map((f) => f.detail).join(" "),
       };
     }
 
@@ -91,8 +114,12 @@ export async function loadDashboard(): Promise<DashboardResult> {
     // no cookies on a data fetch. The cookie's own max-age carries the
     // lifetime instead.
 
-    const batch = (timetable.student.batch || attendance.student.batch).match(/\d+/)?.[0] ?? "1";
-    const week = buildSchedule(timetable.courses, batch);
+    const timetableData = timetable.data;
+    const attendanceData = attendance.data;
+
+    const batch =
+      (timetableData.student.batch || attendanceData.student.batch).match(/\d+/)?.[0] ?? "1";
+    const week = buildSchedule(timetableData.courses, batch);
 
     // Deduped for the headline counts. `timetable.courses` lists a lab-based
     // course once per registration (theory + lab), both rows carrying the same
@@ -100,26 +127,26 @@ export async function loadDashboard(): Promise<DashboardResult> {
     // the Courses, Marks and GPA pages all said 8 / 21. Same data, two
     // answers, on the same screen. buildSchedule() above still gets the RAW
     // list, because it needs every slot registration to place classes.
-    const registered = uniqueCourses(timetable.courses);
+    const registered = uniqueCourses(timetableData.courses);
 
     // Attendance average over courses that have actually met.
-    const conducted = attendance.rows.filter((r) => r.hoursConducted > 0);
+    const conducted = attendanceData.rows.filter((r) => r.hoursConducted > 0);
     const avgAttendance = conducted.length
       ? conducted.reduce((s, r) => s + r.attendancePct, 0) / conducted.length
       : null;
     const belowThreshold = conducted.filter((r) => r.attendancePct < ATTENDANCE_THRESHOLD).length;
 
     // Prefer the richer student record (attendance page carries specialization).
-    const student = attendance.student.specialization
-      ? attendance.student
-      : timetable.student;
+    const student = attendanceData.student.specialization
+      ? attendanceData.student
+      : timetableData.student;
 
     return {
       ok: true,
       data: {
         student,
-        timetable,
-        attendance,
+        timetable: timetableData,
+        attendance: attendanceData,
         week,
         summary: {
           courseCount: registered.length,

@@ -47,6 +47,8 @@ export type LoginOutcome =
 export type LoginFailure =
   | "unknown_user" // account lookup rejected the identifier
   | "bad_password" // credentials rejected
+  | "password_expired" // password is CORRECT but Zoho wants it changed first
+  | "account_locked" // locked/disabled/suspended upstream
   | "captcha_required" // Zoho demanded a challenge we can't solve headless
   | "mfa_required" // second factor enabled on the account
   | "rate_limited" // too many attempts

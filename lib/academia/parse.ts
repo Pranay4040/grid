@@ -43,7 +43,13 @@ function unescapeJs(s: string): string {
     .replace(/\\"/g, '"');
 }
 
-/** Extract the inner HTML for a Zoho view (page link name). */
+/**
+ * Extract the inner HTML for a Zoho view (page link name).
+ *
+ * STRICT on purpose — it answers "does THIS view exist on this page?", which is
+ * what scripts/probe-day-order.ts asks 78 times to test whether a page name is
+ * real. Use resolveView() when you want the rename-tolerant behaviour.
+ */
 export function extractView(pageHtml: string, viewName: string): string | null {
   const marker = `zc-viewcontainer_${viewName}`;
   const at = pageHtml.indexOf(marker);
@@ -63,6 +69,80 @@ export function extractView(pageHtml: string, viewName: string): string | null {
     i++;
   }
   return unescapeJs(pageHtml.slice(start, i));
+}
+
+/** Every Zoho view container name present on a page, deduped, in document
+ *  order. An authenticated data page has at least one; the signed-out shell
+ *  has none. */
+export function viewContainerNames(pageHtml: string): string[] {
+  const names = new Set<string>();
+  for (const m of pageHtml.matchAll(/zc-viewcontainer_([A-Za-z0-9_]+)/g)) {
+    names.add(m[1]);
+  }
+  return [...names];
+}
+
+/**
+ * What Academia actually sent us, independent of whether WE could read it.
+ *
+ * This distinction is the whole point: a page with a view container is a
+ * successfully authenticated response, even when the view is one we don't
+ * recognise. Collapsing "container we can't read" into "logged out" is what
+ * told users their session had expired — and sent them to re-enter a password
+ * that was never the problem — every time SRM renamed a page.
+ */
+export type PageState =
+  /** Authenticated: the Creator app rendered at least one view. */
+  | "view_present"
+  /** Academia served its sign-in shell — the session really is dead. */
+  | "logged_out"
+  /** Neither shape. An error page, a maintenance notice, a WAF block. */
+  | "unrecognised";
+
+export function classifyPage(pageHtml: string): PageState {
+  if (viewContainerNames(pageHtml).length > 0) return "view_present";
+  // The signed-out response is the portal's own login shell — the same
+  // signinFrame iframe discoverService() scrapes at the start of a login.
+  if (/signinFrame|\/accounts\/signin|accounts\/p\/[\d-]+\/signin/i.test(pageHtml)) {
+    return "logged_out";
+  }
+  return "unrecognised";
+}
+
+/** A view name with any trailing academic-year suffix stripped:
+ *  `My_Time_Table_2023_24` -> `My_Time_Table`, `My_Attendance` unchanged. */
+function viewStem(name: string): string {
+  return name.replace(/(?:_\d{2,4})+$/, "");
+}
+
+/**
+ * Locate a view's content, tolerating SRM renaming it out from under us.
+ *
+ * Exact name first. Failing that, accept the page's SOLE view container when
+ * it's the same page under a new year suffix (`My_Time_Table_2023_24` ->
+ * `My_Time_Table_2026_27`) — the rename this codebase has been waiting on
+ * since 2023, per the note on TIMETABLE_VIEW.
+ *
+ * The stem check is what keeps this honest. Without it, "the only container on
+ * the page" happily matched a completely unrelated view and returned an empty
+ * timetable as a success, which is a worse failure than not parsing at all:
+ * silently wrong instead of loudly broken. Anything ambiguous — no container,
+ * several, or one from a different page — returns null and lets the caller
+ * report an unreadable page.
+ */
+export function resolveView(
+  pageHtml: string,
+  preferredName: string,
+): { name: string; inner: string } | null {
+  const exact = extractView(pageHtml, preferredName);
+  if (exact) return { name: preferredName, inner: exact };
+
+  const names = viewContainerNames(pageHtml);
+  if (names.length !== 1 || names[0] === preferredName) return null;
+  if (viewStem(names[0]) !== viewStem(preferredName)) return null;
+
+  const inner = extractView(pageHtml, names[0]);
+  return inner ? { name: names[0], inner } : null;
 }
 
 const clean = (s: string) =>
@@ -159,8 +239,9 @@ function parseStudent(text: string): StudentInfo {
 }
 
 export function parseAttendance(pageHtml: string): AttendanceData | null {
-  const inner = extractView(pageHtml, "My_Attendance");
-  if (!inner) return null;
+  const view = resolveView(pageHtml, "My_Attendance");
+  if (!view) return null;
+  const inner = view.inner;
   const student = parseStudent(clean(inner));
 
   const rows: AttendanceRow[] = [];
@@ -194,15 +275,16 @@ export function parseAttendance(pageHtml: string): AttendanceData | null {
     }
   }
 
-  return { student, rows, marks };
+  return { student, rows, marks, view: view.name };
 }
 
 export function parseTimetable(
   pageHtml: string,
   viewName = "My_Time_Table_2023_24",
 ): TimetableData | null {
-  const inner = extractView(pageHtml, viewName);
-  if (!inner) return null;
+  const view = resolveView(pageHtml, viewName);
+  if (!view) return null;
+  const inner = view.inner;
   const student = parseStudent(clean(inner));
   const title =
     clean(inner).match(/My Time Table\s*(AY\s*\d{4}-\d{2}\s*\w+)/i)?.[0] ?? "My Time Table";
@@ -231,5 +313,5 @@ export function parseTimetable(
     }
   }
 
-  return { student, title, courses };
+  return { student, title, courses, view: view.name };
 }

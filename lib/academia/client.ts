@@ -248,7 +248,21 @@ async function signinAc(
   });
 
   if (!json) {
-    return { ok: false, reason: "portal_unavailable", message: "no JSON from signin.ac" };
+    // A non-JSON body is usually Zoho's bot-protection challenge page, which is
+    // exactly what a deployment behind shared cloud IPs gets. Naming it beats
+    // "no JSON from signin.ac", which reads like the portal is down.
+    if (/captcha|recaptcha|hip_required|are you a human/i.test(text)) {
+      return {
+        ok: false,
+        reason: "captcha_required",
+        message: "Zoho served a captcha challenge — sign in once on the official portal, then retry.",
+      };
+    }
+    return {
+      ok: false,
+      reason: "portal_unavailable",
+      message: `Academia returned a non-JSON response to sign-in (${text.length} bytes).`,
+    };
   }
 
   const blob = `${json.status ?? ""} ${json.code ?? ""} ${json.message ?? ""} ${json.msg ?? ""} ${json.error?.msg ?? ""}`.toLowerCase();
@@ -428,24 +442,61 @@ export function classifyError(json: ZohoEnvelope): {
   const raw = `${json.errors?.[0]?.message ?? ""} ${json.message ?? ""} ${
     json.localized_message ?? ""
   } ${json.error?.msg ?? ""}`.toLowerCase();
-  const code = json.errors?.[0]?.code ?? json.error?.code ?? "";
 
   const has = (...needles: string[]) => needles.some((n) => raw.includes(n));
 
   if (has("captcha")) {
     return { ok: false, reason: "captcha_required", message: "Captcha required — sign in on the official portal once, then retry." };
   }
-  if (has("otp", "mfa", "two factor", "two-factor", "verify")) {
+  if (has("otp", "mfa", "two factor", "two-factor", "second factor")) {
     return { ok: false, reason: "mfa_required", message: "This account has extra verification enabled." };
   }
-  if (has("too many", "rate", "temporarily blocked")) {
+  if (has("too many", "rate limit", "temporarily blocked")) {
     return { ok: false, reason: "rate_limited", message: "Too many attempts. Wait a few minutes and retry." };
   }
-  if (has("password", "credential", "incorrect", "invalid") || code.startsWith("IN")) {
-    return { ok: false, reason: "bad_password", message: "Incorrect NetID or password." };
+  // BEFORE bad_password, deliberately: every one of these messages contains the
+  // word "password" while meaning the password was RIGHT. Ordering them after
+  // the credential check told people with a correct password that it was wrong,
+  // and no amount of retyping could ever clear it.
+  if (has("password has expired", "password expired", "expired password", "change your password", "password change", "reset your password", "must change")) {
+    return {
+      ok: false,
+      reason: "password_expired",
+      message:
+        "Your SRM password needs to be changed before you can sign in. " +
+        "Do that on the official Academia portal, then come back.",
+    };
   }
-  if (has("does not exist", "no account")) {
+  if (has("locked", "disabled", "suspended", "deactivated")) {
+    return {
+      ok: false,
+      reason: "account_locked",
+      message: "SRM has locked this account. Sort it out on the official Academia portal.",
+    };
+  }
+  if (has("does not exist", "no account", "account not found", "user not found")) {
     return { ok: false, reason: "unknown_user", message: "Account not found." };
+  }
+  // Narrow, deliberate phrases only. This used to match the bare words
+  // "password" / "invalid" / "incorrect", which swallowed "invalid CSRF token",
+  // "invalid request" and every other handshake failure and reported them all
+  // as a wrong password — hiding the real fault behind an error the user can
+  // never act on. An honest `unexpected` with the real message beats a
+  // confident wrong answer.
+  if (
+    has(
+      "invalid email address or password",
+      "invalid username or password",
+      "incorrect password",
+      "invalid password",
+      "wrong password",
+      "invalid credential",
+      "incorrect credential",
+      "bad credential",
+      "invalid login",
+    )
+  ) {
+    return { ok: false, reason: "bad_password", message: "Incorrect NetID or password." };
   }
   return {
     ok: false,

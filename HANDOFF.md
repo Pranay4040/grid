@@ -129,10 +129,19 @@ context from `backdrop-filter` (pre-redesign), so the header needed
 
 ## Current state
 
-`npx tsc --noEmit`, `npx eslint .` and `npx next build` are clean. Of the 14
-`scripts/verify-*.ts`, **12 exit 0**; `verify-grid.ts` and `verify-parse.ts`
+`npx tsc --noEmit`, `npx eslint .` and `npx next build` are clean. Of the 15
+`scripts/verify-*.ts`, **13 exit 0**; `verify-grid.ts` and `verify-parse.ts`
 need a LIVE Academia session (`npx tsx scripts/save-session.ts`) and report
 honestly when it's expired — that's environment, not a regression.
+
+**Reported login bug, fixed:** "it keeps failing even with the correct
+password" turned out not to be a login failure at all — sign-in succeeded and
+the *dashboard* reported `session_expired` because a null parse was assumed to
+mean the logged-out shell. See ROADMAP.md under Auth for both halves of the
+fix. **Still unverified against the live portal** (this environment can't reach
+`academia.srmist.edu.in`): if the trigger really was SRM renaming the timetable
+page, the new candidate list should now find it — and if it didn't, the app now
+prints the view names it actually saw instead of blaming the password.
 
 Everything is **merged to `master` and pushed**. Remote is
 `github.com/Pranay4040/grid` (renamed from `portalfree` via `gh repo rename`;

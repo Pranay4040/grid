@@ -14,11 +14,13 @@ async function main() {
   }
   const fetchAs = authedFetch(session);
 
-  const tt = await getTimetable(fetchAs);
+  const ttRes = await getTimetable(fetchAs);
   console.log("── TIMETABLE ──");
-  if (!tt) {
-    console.log("  parse returned null (view not found)");
+  if (!ttRes.ok) {
+    console.log(`  ${ttRes.reason}: ${ttRes.detail}`);
   } else {
+    const tt = ttRes.data;
+    console.log("  view:", ttRes.view);
     console.log("  title:", tt.title);
     console.log("  student fields present:", {
       reg: Boolean(tt.student.registrationNumber),
@@ -38,11 +40,13 @@ async function main() {
     }
   }
 
-  const att = await getAttendance(fetchAs);
+  const attRes = await getAttendance(fetchAs);
   console.log("\n── ATTENDANCE ──");
-  if (!att) {
-    console.log("  parse returned null");
+  if (!attRes.ok) {
+    console.log(`  ${attRes.reason}: ${attRes.detail}`);
   } else {
+    const att = attRes.data;
+    console.log("  view:", attRes.view);
     console.log("  rows parsed:", att.rows.length);
     for (const r of att.rows) {
       console.log(

@@ -311,6 +311,32 @@ Living checklist across every part of the app. Checked items are shipped on
       the 30-day backstop gate anything), and `probe-session-liveness.ts`
       confirmed Academia reissues no cookies on a data fetch. The cookie's own
       max-age now carries the lifetime, pinned to the same hard deadline.
+- [x] **Fixed "the correct password keeps getting rejected."** Two independent
+      bugs wearing the same face, neither of them about credentials.
+      (1) `loadDashboard()` treated *either parser returning null* as
+      `session_expired`, on the assumption that a null parse could only mean
+      the logged-out shell. It also means "the session is fine and SRM changed
+      the page" — and then the app told users to sign in again, accepted the
+      right password, redirected back, and said it again, with no way out.
+      Now `classifyPage()` (`lib/academia/parse.ts`) separates a real signin
+      shell from an authenticated page we couldn't read, and the second gets
+      its own `page_unavailable` state with the diagnostic (view names, HTTP
+      status, byte count — no page content, so no PII) and deliberately no
+      sign-in button. `getTimetable()` also tries academic-year-derived page
+      names, and `resolveView()` follows a same-page rename, so the rename
+      this codebase has been braced for since 2023 degrades to one extra
+      request instead of a lockout.
+      (2) `classifyError()` matched the bare words "password", "invalid",
+      "incorrect" and any code starting `IN`, so "Your password has expired",
+      "You must change your password", "Invalid CSRF token" and
+      `INTERNAL_SERVER_ERROR` all rendered as "Incorrect NetID or password."
+      Now narrowed to actual credential phrases, with `password_expired` and
+      `account_locked` checked *first* (both contain the word "password" while
+      meaning it was right) and everything unmodelled falling through to
+      `unexpected` with the real message. Non-JSON signin.ac responses are
+      sniffed for a captcha challenge instead of being reported as an outage.
+      Regression tests: `scripts/verify-page-state.ts` (21 checks, offline
+      fixtures) and the extended `scripts/verify-login-errors.ts`.
 - [ ] **Zoho may throttle a public deployment.** Every login will originate
       from Vercel's IP range — the exact pattern Zoho's bot protection
       targets. `client.ts` already classifies `captcha_required` and

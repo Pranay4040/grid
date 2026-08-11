@@ -15,16 +15,18 @@ export function NotConnected({
         ? "Session expired"
         : reason === "misconfigured"
           ? "Server not configured"
-          : "Couldn’t load data";
+          : reason === "page_unavailable"
+            ? "Academia changed"
+            : "Couldn’t load data";
   const body =
     reason === "no_session"
       ? "Sign in with your SRM Academia account to see your timetable, attendance, and marks."
       : reason === "session_expired"
         ? "Your Academia session ran out. Sign in again to keep going."
         : message;
-  // Deliberately no sign-in button when misconfigured — logging in cannot
-  // succeed until the deployment gets a SESSION_SECRET, so offering it would
-  // just send people in a loop.
+  // Deliberately no sign-in button when misconfigured or when the portal
+  // itself changed — logging in cannot fix either one, so offering it would
+  // just send people round the loop this state exists to break.
   const showConnect = reason === "no_session" || reason === "session_expired";
   return (
     <Panel className="p-8 text-center sm:p-12">

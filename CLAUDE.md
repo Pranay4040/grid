@@ -23,7 +23,20 @@ ROADMAP.md "Theming / UI system").
 1. Login = Zoho `/accounts/signin.ac` + `oauthorize_uri`/`access_token` exchange; full email required.
 2. Data pages need header `X-Requested-With: XMLHttpRequest` (else 8KB shell).
 3. Data hides in `pageSanitizer.sanitize('…escaped JS…')`; tables malformed → parse by splitting `</tr>`.
-4. Timetable page = `My_Time_Table_2023_24` (stale name, current content).
+4. Timetable page = `My_Time_Table_2023_24` (stale name, current content). Not
+   assumed permanent any more: `timetableViewCandidates()` in `data.ts` falls
+   through to academic-year-derived names, and `resolveView()` in `parse.ts`
+   accepts a page's sole view container when it's the same page under a new
+   year suffix (stem must match — without that guard it silently returned an
+   unrelated view's empty data as a success).
+4b. **"Couldn't parse" ≠ "logged out."** `classifyPage()` decides: a page
+   carrying ANY `zc-viewcontainer_*` is an authenticated response, and only
+   Academia's signin shell is `logged_out`. `loadDashboard()` maps the second
+   to `session_expired` and the first to the new `page_unavailable`, which
+   shows what broke and offers **no** "Connect your account" button. Conflating
+   them is what made a correct password look like it "kept failing": a portal
+   change surfaced as "Session expired" → /login → login succeeds → "Session
+   expired" → forever. Don't collapse these back into one reason.
 5. SRM day-order 1-5, batch slot templates in `timetable-grid.ts`; `L##` labs unplaced (won't-fix — both affected courses are out of syllabus, see ROADMAP.md).
 6. Portal exposes **no** day-order/calendar source to this account (probed 2026-07-26, `scripts/probe-day-order.ts` — every planner/calendar page 403s or is an empty shell). Today's day-order = manual anchor + weekday projection, `lib/timetable/day-order.ts`; this is permanent, not provisional. `/calendar` projects that same anchor across a whole month (`lib/timetable/calendar.ts`) — **every date there is an estimate that drifts after any skipped holiday**, and the page says so. `resolveDayOrder()` projects both directions (signed working-day count + floored modulo); don't "simplify" it back to an unsigned count, that silently breaks every past date.
 7. GPA estimator (`/gpa`, `lib/academia/gpa.ts`) models SRM's 60/40 internal/external split; its marks→grade cutoff table (`MARK_GRADE_CUTOFFS`) is a commonly-cited scale, **unverified** against an official SRM document.

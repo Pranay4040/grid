@@ -56,10 +56,15 @@ export type AttendanceData = {
   student: StudentInfo;
   rows: AttendanceRow[];
   marks: SubjectMarks[];
+  /** The Zoho view container this was actually read from. Usually the name we
+   *  asked for; differs when SRM renamed the view and resolveView() adapted. */
+  view?: string;
 };
 
 export type TimetableData = {
   student: StudentInfo;
   title: string; // "My Time Table AY 2026-27 ODD"
   courses: Course[];
+  /** See AttendanceData.view. */
+  view?: string;
 };

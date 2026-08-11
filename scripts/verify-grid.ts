@@ -15,12 +15,18 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const tt = await getTimetable(authedFetch(session));
-  if (!tt) {
-    console.error("No timetable — the saved session has expired. Re-run: npx tsx scripts/save-session.ts");
+  const res = await getTimetable(authedFetch(session));
+  if (!res.ok) {
+    console.error(
+      res.reason === "logged_out"
+        ? "Session expired. Re-run: npx tsx scripts/save-session.ts"
+        : `Timetable unreadable (portal change, not a login problem): ${res.detail}`,
+    );
     process.exitCode = 1;
     return;
   }
+  const tt = res.data;
+  console.log("read from view:", res.view);
   const batch = tt.student.batch?.match(/\d+/)?.[0] ?? "1";
   console.log("batch:", batch, "| courses:", tt.courses.length);
   const week = buildSchedule(tt.courses, batch);
