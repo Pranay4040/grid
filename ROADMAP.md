@@ -337,6 +337,27 @@ Living checklist across every part of the app. Checked items are shipped on
       sniffed for a captcha challenge instead of being reported as an outage.
       Regression tests: `scripts/verify-page-state.ts` (21 checks, offline
       fixtures) and the extended `scripts/verify-login-errors.ts`.
+- [x] **Survive attendance leaving Academia (Sept 2026).** SRM removed
+      attendance from the Academia portal and moved it to the SRM Student
+      Portal. Because `parseAttendance()` scraped internal marks off the same
+      `My_Attendance` page, that one removal took `/attendance`, `/marks` and
+      `/gpa` with it — and the all-or-nothing dashboard loader then took
+      `/`, `/courses` and `/calendar` down too, so the entire app was dead over
+      a page half of it never needed. Attendance is now non-fatal: the loader's
+      pure half (`composeDashboard()` in `lib/academia/dashboard-data.ts`,
+      split out of `dashboard.ts` precisely so it could be tested) returns
+      `attendance: null` plus an `attendanceIssue`, and the three affected
+      pages render `<AttendanceUnavailable>` instead of an empty table that
+      would have read as "no assessments yet". A missing TIMETABLE is still
+      fatal — everything else derives from it. 19 checks in
+      `scripts/verify-dashboard-compose.ts`.
+- [ ] **Read attendance + marks from the SRM Student Portal.** The actual
+      feature work this implies, and currently unscoped: it's a separate site
+      with its own auth, and nothing about its login flow, session model or
+      page markup has been confirmed against a live page. Needs a captured
+      real response before any client is written — the Academia client was
+      built that way (`scripts/probe-*.ts`) and guessing at Zoho's shapes is
+      exactly what produced the misclassification bugs above.
 - [ ] **Zoho may throttle a public deployment.** Every login will originate
       from Vercel's IP range — the exact pattern Zoho's bot protection
       targets. `client.ts` already classifies `captcha_required` and

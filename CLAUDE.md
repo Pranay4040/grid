@@ -5,10 +5,10 @@
 Free replacement for the paywalled PortalX. Logs into SRM Academia, shows
 timetable/attendance/marks/courses in a flat, minimal UI. Unofficial.
 
-**Status:** ✅ auth, timetable, attendance, Marks table, GPA estimator,
-Courses page, Calendar page, `/welcome` landing hero. ⏳ real assessment data
-(portal hasn't published any this term), multi-user login, study-material
-library (the differentiator).
+**Status:** ✅ auth, timetable, Courses page, Calendar page, GPA estimator,
+`/welcome` landing hero. ❌ **attendance + marks — SRM moved them off Academia
+to the SRM Student Portal (reported Sept 2026), so Grid cannot read them at
+all right now**; see fact 12. ⏳ study-material library (the differentiator).
 
 **Stack:** Next.js 16 · React 19 · Tailwind v4 · TS. Scripts run via `npx tsx`.
 
@@ -48,6 +48,21 @@ ROADMAP.md "Theming / UI system").
 **Dev:** `cp .env.example .env.local` and set `SESSION_SECRET` (`openssl rand -hex 32`), then `npm run dev` and sign in at `/login`. For the `scripts/*.ts` probes (which run outside Next and have no cookie jar), `npx tsx scripts/save-session.ts` still writes `scripts/.session.json`.
 
 11. **Login is rate-limited per IP** (`lib/auth/rate-limit.ts`): 10 attempts / 15 min, checked *before* hitting Zoho, via Upstash REST over plain `fetch` (no dependency). **Fails open** everywhere (unconfigured, down, timeout, no client IP) — never let the limiter break sign-in. Optional; the app runs fine without `UPSTASH_REDIS_REST_*`.
+
+12. **Attendance and marks left Academia (Sept 2026).** SRM removed attendance
+   from academia.srmist.edu.in and publishes it on the SRM Student Portal — a
+   different site Grid has no client for. Both `/attendance` AND `/marks`
+   `/gpa` depend on it, because `parseAttendance()` scrapes internal marks off
+   that same `My_Attendance` page; losing one page loses all three. The
+   timetable, Courses and Calendar are unaffected.
+   `composeDashboard()` (`lib/academia/dashboard-data.ts`) therefore treats a
+   missing attendance page as NON-fatal — `data.attendance` is `AttendanceData
+   | null` with the reason in `data.attendanceIssue`, and the three affected
+   pages render `<AttendanceUnavailable>`. **Don't make attendance fatal
+   again**: it previously took the timetable, courses and calendar down with
+   it, killing every page over one that three of them never needed. And note
+   `summary.belowThreshold`/`avgAttendance` are `null`, not `0`, when there's
+   no source — "nothing below 75%" is a claim we can't make.
 
 **Deploy (Vercel):** set `SESSION_SECRET` in project env vars — use a *different* value than local. Optionally set `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` to activate login rate limiting (recommended before publicising). No other service is needed. Rotating `SESSION_SECRET` logs everyone out.
 

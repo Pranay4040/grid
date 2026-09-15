@@ -12,7 +12,9 @@ export default async function CoursesPage() {
   }
 
   const { timetable, attendance } = result.data;
-  const rows = buildCourseRows(timetable.courses, attendance.rows);
+  // Courses stand on their own; the attendance column just goes blank when
+  // there's no source for it.
+  const rows = buildCourseRows(timetable.courses, attendance?.rows ?? []);
   const summary = summarizeCourses(rows);
 
   return (

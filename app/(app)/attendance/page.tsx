@@ -1,6 +1,7 @@
 import { StatTile } from "@/components/panel";
 import { AttendanceCards } from "@/components/attendance-cards";
 import { NotConnected } from "@/components/not-connected";
+import { AttendanceUnavailable } from "@/components/attendance-unavailable";
 import { getDashboard } from "@/lib/academia/dashboard";
 import { ATTENDANCE_THRESHOLD } from "@/lib/academia/attendance-planner";
 
@@ -11,7 +12,11 @@ export default async function AttendancePage() {
     return <NotConnected reason={result.reason} message={result.message} />;
   }
 
-  const { summary, attendance } = result.data;
+  const { summary, attendance, attendanceIssue } = result.data;
+  if (!attendance) {
+    return <AttendanceUnavailable what="Attendance" issue={attendanceIssue} />;
+  }
+
   const attnTone =
     summary.avgAttendance == null
       ? "neutral"
@@ -31,7 +36,7 @@ export default async function AttendancePage() {
         />
         <StatTile
           label={`Below ${ATTENDANCE_THRESHOLD}%`}
-          value={summary.belowThreshold}
+          value={summary.belowThreshold ?? "—"}
           hint={summary.belowThreshold ? "Needs attention" : "All good"}
           tone={summary.belowThreshold ? "danger" : "success"}
         />
