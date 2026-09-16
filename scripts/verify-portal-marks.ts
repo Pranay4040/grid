@@ -6,7 +6,7 @@
  *   npx tsx scripts/verify-portal-marks.ts scripts/.capture-marks.html
  */
 import { readFileSync } from "node:fs";
-import { parsePortalMarks } from "../lib/portal/parse";
+import { parsePortalMarks, parsePortalMarkComponents } from "../lib/portal/parse";
 
 let failures = 0;
 function check(name: string, actual: unknown, expected: unknown) {
@@ -43,7 +43,29 @@ check("status from onclick", rows[0]?.status, "2");
 check("components empty until the detail page is parsed", rows[0]?.components.length, 0);
 check("login page / junk yields []", parsePortalMarks("<html><form>Login</form></html>").length, 0);
 
+// Component breakdown (studentInternalMarkDetailsInner.jsp)
+const inner = parsePortalMarkComponents(
+  `<div><table class="table"><thead><tr><th>Entered on</th><th>Component</th><th>Mark / Max. Mark</th></tr></thead>
+<tbody><tr><td>12/Aug/2026</td><td>FT-I</td><td>4.50 / 5.00</td></tr>
+<tr><td>01/Sep/2026</td><td>CT-I</td><td>0.00 / 10.00</td></tr></tbody></table></div>`,
+);
+check("two components", inner.length, 2);
+check("component label", inner[0]?.label, "FT-I");
+check("component scored", inner[0]?.scored, 4.5);
+check("component max", inner[1]?.max, 10);
+check("entered on", inner[0]?.enteredOn, "12/Aug/2026");
+check("header row is not a component", inner.some((c) => c.label === "Component"), false);
+check("empty detail page yields []", parsePortalMarkComponents("<div></div>").length, 0);
+
 const file = process.argv[2];
+const innerFile = process.argv[3];
+if (innerFile) {
+  const real = parsePortalMarkComponents(readFileSync(innerFile, "utf8"));
+  console.log(`
+real detail capture: ${real.length} component(s)`);
+  check("real: at least one component", real.length > 0, true);
+  check("real: every component has a label and scored <= max", real.every((c) => c.label && c.scored <= c.max && c.max > 0), true);
+}
 if (file) {
   const real = parsePortalMarks(readFileSync(file, "utf8"));
   console.log(`\nreal capture: ${real.length} courses`);

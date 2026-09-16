@@ -110,14 +110,35 @@ export async function fetchReport(
   report: ReportEndpoint,
   init: { filter?: string; csrfPreventionSalt?: string } = {},
 ): Promise<ReportResponse> {
-  const body = new URLSearchParams({
+  return post(session, report.path, {
     iden: String(report.iden),
     filter: init.filter ?? "",
     hdnFormDetails: "1",
     csrfPreventionSalt: init.csrfPreventionSalt ?? "",
   });
+}
 
-  const res = await fetch(`${ORIGIN}${report.path}`, {
+/** Per-test breakdown for one course — what "View Details" on the marks report
+ *  loads. The body is the portal's own jQuery `$.post` (iden=1, hdnSubjectId,
+ *  status), NOT the report body above; ids come from parsePortalMarks(). */
+export function fetchMarkComponents(
+  session: PortalSession,
+  subjectId: string,
+  status: string,
+): Promise<ReportResponse> {
+  return post(session, `${CONTEXT}/students/report/studentInternalMarkDetailsInner.jsp`, {
+    iden: "1",
+    hdnSubjectId: subjectId,
+    status,
+  });
+}
+
+async function post(
+  session: PortalSession,
+  path: string,
+  fields: Record<string, string>,
+): Promise<ReportResponse> {
+  const res = await fetch(`${ORIGIN}${path}`, {
     method: "POST",
     redirect: "manual",
     headers: {
@@ -130,7 +151,7 @@ export async function fetchReport(
       referer: HRD_SYSTEM,
       cookie: cookieHeader(session),
     },
-    body,
+    body: new URLSearchParams(fields),
   });
 
   return { status: res.status, body: await res.text() };

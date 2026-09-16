@@ -91,6 +91,12 @@ async function main() {
   check("body includes the (empty) csrf salt field", body.includes("csrfPreventionSalt="), true);
   check("response body is returned raw for later parsing", res.body, "<table></table>");
 
+  const detail = calls[1];
+  const dh = new Headers(detail.init.headers);
+  check("detail posts to the Inner URL", detail.url, "https://sp.srmist.edu.in/srmiststudentportal/students/report/studentInternalMarkDetailsInner.jsp");
+  check("detail body matches the portal's own $.post", String(detail.init.body), "iden=1&hdnSubjectId=42782&status=2");
+  check("detail sends the XHR header too", dh.get("x-requested-with"), "XMLHttpRequest");
+
   console.log(failures ? `\n${failures} failure(s)` : "\nAll checks passed");
   process.exit(failures ? 1 : 0);
 }

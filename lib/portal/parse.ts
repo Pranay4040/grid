@@ -269,3 +269,39 @@ export function parsePortalMarks(html: string): PortalMarkRow[] {
   }
   return rows;
 }
+
+/**
+ * Per-test breakdown from studentInternalMarkDetailsInner.jsp. Confirmed
+ * against a real capture (Sept 2026):
+ *   Entered on ("12/Aug/2026") | Component ("FT-I") | Mark / Max. Mark ("4.50 / 5.00")
+ * Emits Grid's MarkComponent shape so it drops into SubjectMarks.components.
+ */
+export function parsePortalMarkComponents(
+  html: string,
+): { label: string; scored: number; max: number; enteredOn: string }[] {
+  const table = findTable(html, "component", "max. mark");
+  if (!table) return [];
+
+  let cols = { entered: 0, label: 1, mark: 2 };
+  const out: { label: string; scored: number; max: number; enteredOn: string }[] = [];
+  for (const cells of tableRows(table)) {
+    const labels = cells.map((c) => c.toLowerCase());
+    if (labels.includes("component")) {
+      cols = {
+        entered: labels.findIndex((l) => l.includes("entered")),
+        label: labels.indexOf("component"),
+        mark: labels.findIndex((l) => l.includes("max")),
+      };
+      continue;
+    }
+    const score = cells[cols.mark]?.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+    if (!score || !cells[cols.label]) continue;
+    out.push({
+      label: cells[cols.label],
+      scored: parseFloat(score[1]),
+      max: parseFloat(score[2]),
+      enteredOn: cells[cols.entered] ?? "",
+    });
+  }
+  return out;
+}
