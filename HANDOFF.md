@@ -148,8 +148,10 @@ semester only, per user's explicit call.
 palette (`--bg #0d0d11`, `--accent #b6b2f2`), independent of the app's theme.
 16:9 desktop grid (fits one viewport, no scroll), hamburger nav with full
 focus trap + scroll lock, full motion system, `prefers-reduced-motion`
-support. **Not wired into the real entry flow** — `/` still goes straight to
-the dashboard regardless of login state.
+support. Wired in since `40a161a`: `proxy.ts` 307s `/` → `/welcome` when there
+is **no** session cookie at all (Next 16 convention is `proxy`, not
+`middleware`). Undecryptable or Academia-rejected cookies still get the
+sign-in / reconnect panel, since those are returning users.
 
 **Whole-app redesign, on explicit request.** Removed the 6-palette ×
 light/dark glassmorphism system entirely (`components/theme.tsx`,
@@ -168,7 +170,7 @@ context from `backdrop-filter` (pre-redesign), so the header needed
 ## Conventions established (keep following these)
 
 - **No test framework** — pure logic gets a standalone `scripts/verify-*.ts`
-  (`check(name, actual, expected)`, PASS/FAIL, `process.exit`). ~9 exist now.
+  (`check(name, actual, expected)`, PASS/FAIL, `process.exit`). 15 exist now.
 - **Persisted client state** = `useSyncExternalStore` over localStorage
   (`lib/store/json-store.ts`'s `makeJsonStore`, shared helper now).
 - **Never touch the user's password.**
@@ -204,8 +206,9 @@ prints the view names it actually saw instead of blaming the password.
 
 Everything is **merged to `master` and pushed**. Remote is
 `github.com/Pranay4040/grid` (renamed from `portalfree` via `gh repo rename`;
-local `origin` already updated). The branch `ui-revamp-courses-calendar` is
-merged and can be deleted.
+local `origin` already updated). Stale local branches
+(`ui-revamp-courses-calendar`, `claude/optimistic-torvalds-845e38`) were merged
+and have been deleted locally.
 
 **Repo is still PRIVATE.** Making it public is the user's call and was
 deliberately not done automatically — it's hard to walk back once cloned or
@@ -225,12 +228,8 @@ the two `UPSTASH_REDIS_REST_*` vars to activate login rate limiting.
 
 1. User has a queue of **minor UI tweaks** they said they'd request one at a
    time — expect those first.
-2. Decide `/welcome`'s real placement (redirect unauth visitors there? new
-   route?) — still orphaned; `/` goes straight to the dashboard regardless of
-   login state. Matters more now that the app is about to be public: new
-   visitors currently land on a bare "Not connected" panel, never the hero.
-3. Study-material library — unscoped differentiator vs. PortalX.
-4. Smaller: Timetable still lives on Overview rather than its own tab; `.ics`
+2. Study-material library — unscoped differentiator vs. PortalX.
+3. Smaller: Timetable still lives on Overview rather than its own tab; `.ics`
    export; batch slot templates beyond 1 & 2; motion polish on the remaining
    surfaces; a per-username login limit to complement the per-IP one.
 
