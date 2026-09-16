@@ -5,7 +5,7 @@
  * same seven courses, same numbers — so these assert against what the portal
  * actually sends, not an invented shape.
  */
-import { parsePortalAttendance } from "../lib/portal/parse";
+import { parsePortalAttendance, resolveColumns } from "../lib/portal/parse";
 import { planAttendance, ATTENDANCE_THRESHOLD } from "../lib/academia/attendance-planner";
 
 let failures = 0;
@@ -119,6 +119,60 @@ const bad = parsePortalAttendance(
    <tr><td>21CSC302J</td><td>X</td><td>38</td><td>30</td><td>2</td><td>94.74</td></tr></table>`,
 );
 check("a course whose hours don't add up is flagged", bad?.inconsistent[0], "21CSC302J");
+
+/* ------------------------- markup we haven't seen ------------------------- */
+/*
+ * The fixture above was reconstructed from a RENDERED screenshot, so the exact
+ * source markup is still unverified. These pin the variants that would
+ * otherwise produce confident, wrong numbers rather than an honest failure.
+ */
+
+const reordered = parsePortalAttendance(`<table>
+  <tr><th>Code</th><th>Description</th><th>Total Percentage</th><th>Absent hours</th><th>Att. hours</th><th>Max. hours</th></tr>
+  <tr><td>21CSC302J</td><td>COMPUTER NETWORKS</td><td>94.74</td><td>2</td><td>36</td><td>38</td></tr>
+</table>`);
+check("reordered columns still map correctly", reordered?.rows[0]?.hoursConducted, 38);
+check("…and absent doesn't get swapped with attended", reordered?.rows[0]?.hoursAbsent, 2);
+check("…and the percentage follows its header", reordered?.rows[0]?.attendancePct, 94.74);
+
+const extraCol = parsePortalAttendance(`<table>
+  <tr><th>S.No</th><th>Code</th><th>Description</th><th>Max. hours</th><th>Att. hours</th><th>Absent hours</th><th>Total Percentage</th></tr>
+  <tr><td>1</td><td>21CSC302J</td><td>COMPUTER NETWORKS</td><td>38</td><td>36</td><td>2</td><td>94.74</td></tr>
+</table>`);
+check("an inserted leading column doesn't shift every number", extraCol?.rows[0]?.hoursConducted, 38);
+check("…title still resolves", extraCol?.rows[0]?.title, "COMPUTER NETWORKS");
+
+const tdHeaders = parsePortalAttendance(`<table>
+  <tr><td>Code</td><td>Description</td><td>Max. hours</td><td>Att. hours</td><td>Absent hours</td><td>Total Percentage</td></tr>
+  <tr><td>21CSC302J</td><td>COMPUTER NETWORKS</td><td>38</td><td>36</td><td>2</td><td>94.74</td></tr>
+</table>`);
+check("headers in <td> instead of <th> still work", tdHeaders?.rows[0]?.hoursAbsent, 2);
+
+const nested = parsePortalAttendance(`<table>
+  <tr><th>Code</th><th>Description</th><th>Max. hours</th><th>Att. hours</th><th>Absent hours</th><th>Total Percentage</th></tr>
+  <tr><td><font face="x">21CSC302J</font></td><td><b>COMPUTER&nbsp;NETWORKS</b></td><td>38</td><td>36</td><td>2</td><td>94.74</td></tr>
+</table>`);
+check("nested font/b tags in cells are stripped", nested?.rows[0]?.code, "21CSC302J");
+check("&nbsp; in a title becomes a space", nested?.rows[0]?.title, "COMPUTER NETWORKS");
+
+const noHeader = parsePortalAttendance(`<table>
+  <tr><td>Code</td><td>Description</td></tr>
+  <tr><td>21CSC302J</td><td>COMPUTER NETWORKS</td><td>38</td><td>36</td><td>2</td><td>94.74</td></tr>
+</table>`);
+check("a table with no usable header falls back to observed order", noHeader?.rows[0]?.hoursConducted, 38);
+
+// The swap this guards against: "Absent hours" must never satisfy the "att" test.
+check(
+  "absent is never mistaken for attended",
+  resolveColumns(["Code", "Description", "Max. hours", "Att. hours", "Absent hours", "Total Percentage"])?.absent,
+  4,
+);
+check(
+  "attended resolves to its own column",
+  resolveColumns(["Code", "Description", "Max. hours", "Att. hours", "Absent hours", "Total Percentage"])?.attended,
+  3,
+);
+check("a non-header row resolves to null", resolveColumns(["21CSC302J", "COMPUTER NETWORKS"]), null);
 
 console.log(failures ? `\n${failures} failure(s)` : "\nAll checks passed");
 process.exit(failures ? 1 : 0);

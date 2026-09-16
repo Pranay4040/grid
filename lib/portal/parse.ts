@@ -21,6 +21,14 @@
  * Academia did. Those are left empty rather than inferred: guessing "Theory"
  * from a course-code suffix would be a fabricated value in a field the UI
  * presents as fact.
+ *
+ * COLUMNS ARE RESOLVED BY HEADER LABEL, not by position. The fixture behind the
+ * tests was reconstructed from a rendered screenshot of the report rather than
+ * from its source, so "Max. hours is the third cell" is an assumption that was
+ * never actually verified against the markup. Reading the header row instead
+ * means a reordered, renamed-ish or extra column doesn't silently shift every
+ * number one to the left — which would produce confident, wrong attendance.
+ * Positional order is kept only as a fallback for a table with no header.
  */
 import type { AttendanceRow } from "../academia/data-types";
 
@@ -86,28 +94,94 @@ export type PortalAttendance = {
   inconsistent: string[];
 };
 
+/** Which cell holds what. Defaults are the observed order, used only when a
+ *  table carries no recognisable header row. */
+export type ColumnMap = {
+  code: number;
+  title: number;
+  conducted: number;
+  attended: number;
+  absent: number;
+  percent: number;
+};
+
+const DEFAULT_COLUMNS: ColumnMap = {
+  code: 0,
+  title: 1,
+  conducted: 2,
+  attended: 3,
+  absent: 4,
+  percent: 5,
+};
+
+/**
+ * Map header labels to cell indices. Returns null when the row isn't a header.
+ *
+ * "absent" is tested before "att" deliberately: they're the two hour columns
+ * and matching loosely would swap attended with absent, turning a 94% course
+ * into a 5% one without anything looking wrong.
+ */
+export function resolveColumns(headerCells: string[]): ColumnMap | null {
+  const labels = headerCells.map((c) => c.toLowerCase());
+  const find = (pred: (label: string) => boolean) => labels.findIndex(pred);
+
+  const code = find((l) => l.includes("code"));
+  const title = find((l) => l.includes("description") || l.includes("title"));
+  if (code === -1 || title === -1) return null;
+
+  const absent = find((l) => l.includes("absent"));
+  const attended = find((l) => l.includes("att") && !l.includes("absent"));
+  const conducted = find((l) => l.includes("max") || l.includes("conducted") || l.includes("total hours"));
+  const percent = find((l) => l.includes("percent") || l.includes("%"));
+
+  return {
+    code,
+    title,
+    conducted: conducted === -1 ? DEFAULT_COLUMNS.conducted : conducted,
+    attended: attended === -1 ? DEFAULT_COLUMNS.attended : attended,
+    absent: absent === -1 ? DEFAULT_COLUMNS.absent : absent,
+    percent: percent === -1 ? DEFAULT_COLUMNS.percent : percent,
+  };
+}
+
 export function parsePortalAttendance(html: string): PortalAttendance | null {
-  const table = findTable(html, "code", "absent hours") ?? findTable(html, "code", "percentage");
+  const table =
+    findTable(html, "code", "absent hours") ??
+    findTable(html, "code", "percentage") ??
+    findTable(html, "code", "description");
   if (!table) return null;
+
+  const allRows = tableRows(table);
+
+  // First row that reads as a header wins; otherwise fall back to the observed
+  // column order.
+  let columns: ColumnMap = DEFAULT_COLUMNS;
+  for (const cells of allRows) {
+    if (cells.some((c) => CODE_RE.test(c))) break; // data started; no header here
+    const resolved = resolveColumns(cells);
+    if (resolved) {
+      columns = resolved;
+      break;
+    }
+  }
 
   const rows: AttendanceRow[] = [];
   const inconsistent: string[] = [];
 
-  for (const cells of tableRows(table)) {
-    const code = cells[0]?.match(CODE_RE)?.[1];
+  for (const cells of allRows) {
+    const code = cells[columns.code]?.match(CODE_RE)?.[1];
     if (!code) continue; // header and spacer rows carry no course code
 
-    // Code | Description | Max | Att | Absent | Percentage
-    const hoursConducted = num(cells[2]);
-    const hoursAttended = num(cells[3]);
-    const hoursAbsent = num(cells[4]);
-    const attendancePct = num(cells[5]);
+    const hoursConducted = num(cells[columns.conducted]);
+    const hoursAttended = num(cells[columns.attended]);
+    const hoursAbsent = num(cells[columns.absent]);
+    const attendancePct = num(cells[columns.percent]);
 
     if (hoursConducted !== hoursAttended + hoursAbsent) inconsistent.push(code);
 
     rows.push({
       code,
-      title: cells[1] ?? "",
+      title: cells[columns.title] ?? "",
       category: "",
       faculty: "",
       slot: "",
