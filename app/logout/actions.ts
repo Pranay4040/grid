@@ -1,16 +1,17 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { clearSession } from "@/lib/auth/session-cookie";
-import { clearPortalSession } from "@/lib/portal/session-cookie";
+import { PORTAL_COOKIE } from "@/lib/auth/cookie-name";
 
 export async function logoutAction() {
   // Drops the encrypted cookie. Since the server keeps no copy of the session,
   // deleting the user's cookie IS the logout — there's no server-side record
   // left behind to revoke.
   await clearSession();
-  await clearPortalSession();
+  (await cookies()).delete(PORTAL_COOKIE); // the Student Portal snapshot too
   revalidatePath("/");
   redirect("/login");
 }

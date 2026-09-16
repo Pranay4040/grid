@@ -17,7 +17,7 @@ export default async function GpaPage() {
   // confident, wrong SGPA.
   const marks = portal.state === "ok" ? portal.marks : attendance?.marks;
   if (!marks) {
-    return <AttendanceUnavailable what="Marks" portal={portal} />;
+    return <AttendanceUnavailable what="Marks" />;
   }
 
   return <GpaBoard courses={timetable.courses} marks={marks} />;

@@ -157,18 +157,3 @@ async function post(
 
   return { status: res.status, body: await res.text() };
 }
-
-/**
- * Pull ONLY the session cookies out of whatever the user pasted: a DevTools
- * "Copy as cURL" command (-b '...' or -H 'cookie: ...'), a bare Cookie header,
- * or `document.cookie` output. Matching names anywhere in the text is what
- * makes all three work; everything else in a cURL (headers, body, URL) is
- * discarded and never stored.
- */
-export function extractPortalCookies(pasted: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const m of pasted.matchAll(/\b(JSESSIONID|TS[0-9a-f]{6,})=([^;'"\s\\]+)/gi)) {
-    out[m[1]] = m[2];
-  }
-  return out;
-}

@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { StatTile } from "@/components/panel";
+import { formatSyncTime } from "@/lib/portal/format";
 import { AttendanceCards } from "@/components/attendance-cards";
 import { NotConnected } from "@/components/not-connected";
 import { AttendanceUnavailable } from "@/components/attendance-unavailable";
@@ -20,7 +22,7 @@ export default async function AttendancePage() {
     if (!result.ok && portal.state === "not_connected") {
       return <NotConnected reason={result.reason} message={result.message} />;
     }
-    return <AttendanceUnavailable what="Attendance" portal={portal} />;
+    return <AttendanceUnavailable what="Attendance" />;
   }
 
   const { avgAttendance, belowThreshold } = attendanceStats(rows);
@@ -44,9 +46,14 @@ export default async function AttendancePage() {
           tone={belowThreshold ? "danger" : "success"}
         />
       </div>
-      {portal.state === "ok" && portal.attendance.period ? (
+      {portal.state === "ok" ? (
         <p className="text-xs text-faint">
-          From the SRM Student Portal · {portal.attendance.period.from} → {portal.attendance.period.to}
+          From the SRM Student Portal
+          {portal.attendance.period ? ` · ${portal.attendance.period.from} → ${portal.attendance.period.to}` : ""}
+          {" · "}sent {formatSyncTime(portal.takenAt)} ·{" "}
+          <Link href="/portal" className="underline decoration-dotted underline-offset-2 hover:no-underline">
+            refresh
+          </Link>
         </p>
       ) : null}
       <AttendanceCards rows={rows} />

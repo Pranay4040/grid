@@ -18,7 +18,7 @@ export default async function MarksPage() {
   // read as "nothing uploaded yet", which is a different and wrong claim.
   const marks = portal.state === "ok" ? portal.marks : attendance?.marks;
   if (!marks) {
-    return <AttendanceUnavailable what="Marks" portal={portal} />;
+    return <AttendanceUnavailable what="Marks" />;
   }
 
   return <MarksTable rows={buildMarksRows(timetable.courses, marks)} />;
