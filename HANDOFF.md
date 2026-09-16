@@ -3,6 +3,65 @@
 Quick-context primer for picking this back up. Full detail: `ROADMAP.md`
 (feature checklist) and `CLAUDE.md` (stack/facts, always-loaded).
 
+## READ THIS FIRST — Student Portal work in progress (Sept 2026)
+
+**Branch: `claude/login-password-issue-nqxvgx`.** Not merged to `master`.
+
+SRM removed attendance + internal marks from Academia and moved them to the
+**SRM Student Portal** (`sp.srmist.edu.in`), a separate Java webapp. Grid is
+mid-way through building a client for it. What's confirmed, from two real
+captured requests:
+
+- Reports come from `POST /srmiststudentportal/students/report/<name>.jsp`
+  with body `iden=<n>&filter=&hdnFormDetails=1&csrfPreventionSalt=`
+  (the salt was empty in both captures and still worked).
+  **attendance = `studentAttendanceDetails.jsp`, `iden=9`** ·
+  **internal marks = `studentInternalMarkDetails.jsp`, `iden=13`**
+- Needs `X-Requested-With: XMLHttpRequest`, plus `Origin` + `Referer`
+  (`.../students/template/HRDSystem.jsp`) which the WAF likely checks.
+- Auth is TWO cookies: `JSESSIONID` (Tomcat, `.worker<n>` LB affinity suffix)
+  and a `TS…` F5 BIG-IP cookie. **Both** are required.
+- `HRDSystem.jsp#!` is a hashbang shell — all data arrives by these XHRs.
+
+**Login is NOT automated and must not be.** The portal login has a mandatory
+captcha (`SCaptchaServlet`) plus bot-detection telemetry (`resources/js/
+secure2.js` — canvas fingerprint, mouse/keystroke cadence, `navigator.
+webdriver`). Getting a headless script past that is bypassing bot protection,
+which is this project's hard line. The session is captured from a real human
+browser login and replayed; see `lib/portal/client.ts`.
+
+### Built so far
+- `lib/portal/client.ts` — report endpoints + `fetchReport()`, reproducing the
+  captured requests exactly. 19 checks, `verify-portal-client.ts`.
+- `lib/portal/parse.ts` — attendance parser. Columns resolved by HEADER LABEL,
+  not position. Emits Grid's existing `AttendanceRow`, so `planAttendance()`
+  and the attendance cards work unchanged. 45 checks,
+  `verify-portal-attendance.ts`.
+- `lib/portal/inspect.ts` + `scripts/capture-portal.ts` +
+  `scripts/inspect-capture.ts` — masked capture forensics, so a real response
+  can be shared without leaking name/reg-number/marks.
+
+### Next steps (in order)
+1. **Verify the attendance parser against a real capture.** The fixture was
+   reconstructed from a *rendered screenshot*, so the source markup is still
+   unconfirmed (hence the header-based column mapping). Run:
+   `npx tsx scripts/verify-portal-capture.ts scripts/.capture-attendance.html`
+   To produce that file, replay the attendance cURL from DevTools with
+   `-o scripts\.capture-attendance.html` while logged into the portal.
+2. **Write the internal-marks parser.** Same recipe, `iden=13`. Capture the
+   response first — do NOT invent its shape.
+3. **Decide how a portal session reaches Grid.** Because login can't be
+   automated, the user has to hand over the two cookies somehow (a "Connect
+   Student Portal" paste-your-cookie flow?). Unresolved design question.
+4. **UNVERIFIED RISK:** whether the F5/WAF session survives replay from a
+   server IP (Vercel) rather than the browser that logged in. If it's pinned
+   to client IP/User-Agent, server-side replay fails. Test before building on
+   it.
+
+**This environment cannot reach `srmist.edu.in`** (egress is allowlisted to the
+npm registry and GitHub), which is why steps 1–2 are blocked here and need a
+session running on the student's own machine.
+
 ## What got built (most recent session)
 
 **Multi-user auth — encrypted session cookie, no database.** Was the big
