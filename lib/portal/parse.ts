@@ -215,3 +215,57 @@ export function parsePortalAttendance(html: string): PortalAttendance | null {
     inconsistent,
   };
 }
+
+/**
+ * One course from the internal-marks summary
+ * (POST students/report/studentInternalMarkDetails.jsp, iden=13).
+ *
+ * Confirmed against a real capture (Sept 2026): a single table
+ *   Code | Description | Mark / Max. Mark ("4.50 / 5.00") | [View Details]
+ * listing ONLY courses that have at least one assessment — not every
+ * registered course, so absence here means "not graded yet", not zero.
+ *
+ * The per-test breakdown is not in this page. Each row's button calls
+ * funViewComponentWiseMarks(subjectId, code, title, status), which POSTs
+ * studentInternalMarkDetailsInner.jsp (iden=1, hdnSubjectId, status); those
+ * two ids are kept so that fetch can be made. Components stay [] until that
+ * response has been captured and a parser written against it.
+ */
+export type PortalMarkRow = {
+  code: string;
+  title: string;
+  courseType: string;
+  components: { label: string; scored: number; max: number }[];
+  total: number;
+  maxTotal: number;
+  subjectId: string;
+  status: string;
+};
+
+export function parsePortalMarks(html: string): PortalMarkRow[] {
+  const table = findTable(html, "code", "max. mark");
+  if (!table) return [];
+
+  const rows: PortalMarkRow[] = [];
+  // Raw chunks, not tableRows(): the ids live in an onclick attribute that
+  // clean() strips.
+  for (const chunk of table.split(/<\/tr>/i)) {
+    const cells = [...chunk.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => clean(m[1]));
+    const code = cells[0]?.match(CODE_RE)?.[1];
+    const score = cells[2]?.match(/([\d.]+)\s*\/\s*([\d.]+)/);
+    if (!code || !score) continue;
+
+    const ids = chunk.match(/funViewComponentWiseMarks\(\s*'([^']*)'[^)]*?,\s*'?(\w+)'?\s*\)/);
+    rows.push({
+      code,
+      title: cells[1] ?? "",
+      courseType: "",
+      components: [],
+      total: parseFloat(score[1]),
+      maxTotal: parseFloat(score[2]),
+      subjectId: ids?.[1] ?? "",
+      status: ids?.[2] ?? "",
+    });
+  }
+  return rows;
+}
