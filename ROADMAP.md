@@ -336,6 +336,41 @@ Living checklist across every part of the app. Checked items are shipped on
       sniffed for a captcha challenge instead of being reported as an outage.
       Regression tests: `scripts/verify-page-state.ts` (21 checks, offline
       fixtures) and the extended `scripts/verify-login-errors.ts`.
+- [x] **Survive attendance leaving Academia (Sept 2026).** SRM removed
+      attendance from the Academia portal and moved it to the SRM Student
+      Portal. Because `parseAttendance()` scraped internal marks off the same
+      `My_Attendance` page, that one removal took `/attendance`, `/marks` and
+      `/gpa` with it — and the all-or-nothing dashboard loader then took
+      `/`, `/courses` and `/calendar` down too, so the entire app was dead over
+      a page half of it never needed. Attendance is now non-fatal: the loader's
+      pure half (`composeDashboard()` in `lib/academia/dashboard-data.ts`,
+      split out of `dashboard.ts` precisely so it could be tested) returns
+      `attendance: null` plus an `attendanceIssue`, and the three affected
+      pages render `<AttendanceUnavailable>` instead of an empty table that
+      would have read as "no assessments yet". A missing TIMETABLE is still
+      fatal — everything else derives from it. 19 checks in
+      `scripts/verify-dashboard-compose.ts`.
+- [ ] **Read attendance + marks from the SRM Student Portal.** The portal
+      publishes no API, so the only route is the one `lib/academia/` already
+      took: replay the requests the site's own frontend makes, then parse what
+      comes back. Blocked on ONE thing — a real captured response. Nothing
+      about its login flow, session model or markup has been confirmed against
+      a live page, and Claude's sandbox cannot reach `srmist.edu.in` (verified:
+      egress is allowlisted to the npm registry and GitHub).
+      Tooling for that capture is built and tested:
+      `scripts/capture-portal.ts` fetches one page with a browser session's
+      cookies and writes two files — the raw body (gitignored, private) and a
+      MASKED structural report that's safe to share. `lib/portal/inspect.ts`
+      holds the pure half: table structure with headers kept and data cells
+      masked, JSON shapes with keys kept and values masked, and an endpoint
+      scanner, because "no API" nearly always means "no documented API" and
+      the page's own JS still calls something. 24 checks in
+      `scripts/verify-portal-inspect.ts`, most of them asserting that names,
+      register numbers and marks do NOT survive into the shareable report.
+      Once a report exists the build is the known three-layer shape: a client
+      (auth + fetch), a parser (markup -> `AttendanceData`), and a source entry
+      in `data.ts`. Everything above `data-types.ts` — planner, GPA, tables —
+      needs no change, because it only ever knew the types.
 - [ ] **Zoho may throttle a public deployment.** Every login will originate
       from Vercel's IP range — the exact pattern Zoho's bot protection
       targets. `client.ts` already classifies `captcha_required` and

@@ -3,6 +3,77 @@
 Quick-context primer for picking this back up. Full detail: `ROADMAP.md`
 (feature checklist) and `CLAUDE.md` (stack/facts, always-loaded).
 
+## READ THIS FIRST — Student Portal work in progress (Sept 2026)
+
+**Branch: `portal-migration`** (pushed; not merged to `master`).
+
+SRM removed attendance + internal marks from Academia and moved them to the
+**SRM Student Portal** (`sp.srmist.edu.in`), a separate Java webapp. Grid is
+mid-way through building a client for it. What's confirmed, from two real
+captured requests:
+
+- Reports come from `POST /srmiststudentportal/students/report/<name>.jsp`
+  with body `iden=<n>&filter=&hdnFormDetails=1&csrfPreventionSalt=`
+  (the salt was empty in both captures and still worked).
+  **attendance = `studentAttendanceDetails.jsp`, `iden=9`** ·
+  **internal marks = `studentInternalMarkDetails.jsp`, `iden=13`**
+- Needs `X-Requested-With: XMLHttpRequest`, plus `Origin` + `Referer`
+  (`.../students/template/HRDSystem.jsp`) which the WAF likely checks.
+- Auth is TWO cookies: `JSESSIONID` (Tomcat, `.worker<n>` LB affinity suffix)
+  and a `TS…` F5 BIG-IP cookie. **Both** are required.
+- `HRDSystem.jsp#!` is a hashbang shell — all data arrives by these XHRs.
+
+**Login is NOT automated and must not be.** The portal login has a mandatory
+captcha (`SCaptchaServlet`) plus bot-detection telemetry (`resources/js/
+secure2.js` — canvas fingerprint, mouse/keystroke cadence, `navigator.
+webdriver`). Getting a headless script past that is bypassing bot protection,
+which is this project's hard line. Confirmed on the live login form (Sept 16):
+it also posts `fpPayload`/`fpToken` (fingerprint), `telemetryPayload`, a
+honeypot field and `recaptchaToken`, so a Grid-hosted login form is out too.
+(The page also leaks the captcha answer in `SECURE_CONFIG.captchaText` — an SRM
+bug; never use it.)
+
+### Built — end to end (Sept 16 2026)
+- **Parsers, all confirmed against REAL captures** (`scripts/.capture-*.html`,
+  gitignored): attendance (7 courses, arithmetic consistent), internal-marks
+  summary (lists ONLY courses whose teacher has uploaded marks — the rest are
+  "Not uploaded yet", never 0), and the per-test breakdown
+  `studentInternalMarkDetailsInner.jsp` (body `iden=1&hdnSubjectId=&status=`,
+  ids taken from each row's `funViewComponentWiseMarks(...)` onclick).
+- **"Send to Grid" bookmarklet** (`lib/portal/bookmarklet.ts`, set up at
+  `/portal`, nav "Student Portal"). Runs INSIDE the student's signed-in portal
+  tab, makes the portal's own report requests there (so Grid never holds a
+  portal session — no IP-pinning or session-lifetime problem), then does a
+  top-level form POST of the raw pages to `/portal/import`. Form, not fetch:
+  portal CSP is `default-src 'self'` (blocks cross-origin fetch) with no
+  `form-action`; same-tab also dodges mobile pop-up blockers. Phones install it
+  by copying the code into a bookmark's URL (React won't render `javascript:`
+  hrefs, so `components/bookmarklet-install.tsx` sets it via ref).
+- **`app/portal/import/route.ts`** — requires `Origin: https://sp.srmist.edu.in`
+  (anti-forgery), parses via `buildPortalSnapshot()` (`lib/portal/snapshot.ts`),
+  stores a deflated + AES-GCM snapshot in httpOnly `grid_portal` (~800 B real,
+  ~900 B end-of-semester estimate), 303s to `/attendance`. A signed-out tab →
+  `/portal?import=expired`. Logout / "Remove portal data" delete it.
+- `session-crypto.ts` gained `encryptBytes`/`decryptBytes`; the session
+  functions are thin wrappers, token format unchanged.
+- **Pages:** Attendance / Marks / GPA / Courses prefer the snapshot, fall back to
+  Academia's copy. Attendance works with the portal alone ("sent <time> ·
+  refresh" line); Marks/GPA/Courses still need the Academia timetable.
+- **Dead-session page, confirmed live:** HTTP 200, ~466-byte "Please wait login
+  screen is loading..." posting to `loginManager/youLogin.jsp` (`looksLoggedOut()`).
+- Tests: `verify-portal-snapshot.ts` EXECUTES the bookmarklet against stubbed
+  portal responses (real captures when passed) through import parsing and
+  cookie round-trip; plus `verify-portal-marks.ts`, `verify-portal-client.ts`.
+- The earlier paste-your-cURL flow was built then removed in favour of this.
+
+### Still open
+1. **Not yet run on the real signed-in portal.** Everything is verified
+   offline and the import route in the dev server; the first real tap will
+   show whether the portal's CSP on signed-in pages differs from the login page.
+2. Snapshot, not live: data is as of the last tap.
+3. The Academia timetable is still required for Marks/GPA. If Academia drops
+   the timetable too, the portal's course list would need to replace it.
+
 ## What got built (most recent session)
 
 **Multi-user auth — encrypted session cookie, no database.** Was the big

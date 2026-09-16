@@ -11,3 +11,7 @@
  * Safe to have changed pre-launch; treat as frozen now.
  */
 export const SESSION_COOKIE = "grid_session";
+
+/** The Student Portal session — a separate cookie because it is a separate
+ *  login with its own lifetime; either can expire without the other. */
+export const PORTAL_COOKIE = "grid_portal";

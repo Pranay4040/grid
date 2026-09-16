@@ -105,13 +105,16 @@ const b64 = (buf: Buffer) => buf.toString("base64url");
  * misconfiguration the operator must fix, not something to paper over.
  */
 export function encryptSession(session: AcademiaSession): string {
+  return encryptBytes(Buffer.from(JSON.stringify(session), "utf8"));
+}
+
+/** The token format itself, for any payload — the Student Portal snapshot
+ *  cookie uses it for compressed bytes. Same key, IV and tag rules. */
+export function encryptBytes(plaintext: Buffer): string {
   const key = getKey();
   const iv = randomBytes(IV_BYTES); // fresh per encryption — never reused
   const cipher = createCipheriv(ALGORITHM, key, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(JSON.stringify(session), "utf8"),
-    cipher.final(),
-  ]);
+  const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const tag = cipher.getAuthTag();
   return [VERSION, b64(iv), b64(tag), b64(ciphertext)].join(".");
 }
@@ -139,6 +142,19 @@ function isSession(value: unknown): value is AcademiaSession {
  * rather than a bad request — check sessionSecretMissing() first.)
  */
 export function decryptSession(token: string | undefined | null): AcademiaSession | null {
+  const plaintext = decryptBytes(token);
+  if (!plaintext) return null;
+  try {
+    const parsed: unknown = JSON.parse(plaintext.toString("utf8"));
+    return isSession(parsed) ? parsed : null;
+  } catch {
+    return null; // not JSON
+  }
+}
+
+/** Inverse of encryptBytes(): the authenticated plaintext, or null for ANY
+ *  failure (absent, malformed, wrong version, tampered, key rotated). */
+export function decryptBytes(token: string | undefined | null): Buffer | null {
   if (!token) return null;
   const key = getKey();
 
@@ -161,14 +177,8 @@ export function decryptSession(token: string | undefined | null): AcademiaSessio
     const decipher = createDecipheriv(ALGORITHM, key, iv);
     decipher.setAuthTag(tag);
     // .final() is what throws on a bad tag — that's the integrity check.
-    const plaintext = Buffer.concat([
-      decipher.update(ciphertext),
-      decipher.final(),
-    ]).toString("utf8");
-
-    const parsed: unknown = JSON.parse(plaintext);
-    return isSession(parsed) ? parsed : null;
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch {
-    return null; // tampered, truncated, wrong key, or not JSON
+    return null; // tampered, truncated, or wrong key
   }
 }

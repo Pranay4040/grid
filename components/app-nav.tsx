@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/calendar", label: "Calendar" },
   { href: "/marks", label: "Marks" },
   { href: "/gpa", label: "GPA" },
+  { href: "/portal", label: "Student Portal" },
 ];
 
 /** Sized for pages that don't exist yet (see ROADMAP.md). */

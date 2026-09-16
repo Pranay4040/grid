@@ -52,3 +52,7 @@ scripts/.session.json
 scripts/inspect-report.txt
 scripts/structure-report.txt
 scripts/day-order-report.txt
+
+# Student Portal captures (raw bodies contain personal data; report is masked)
+scripts/.capture-*.html
+scripts/capture-report.txt
