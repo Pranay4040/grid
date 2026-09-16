@@ -12,7 +12,23 @@ import { uniqueCourses } from "./courses-table";
 import { buildSchedule, type WeekSchedule } from "./timetable-grid";
 import { ATTENDANCE_THRESHOLD } from "./attendance-planner";
 import type { PageResult } from "./data";
-import type { AttendanceData, StudentInfo, TimetableData } from "./data-types";
+import type { AttendanceData, AttendanceRow, StudentInfo, TimetableData } from "./data-types";
+
+/** Average % and count under threshold, over courses that have actually met.
+ *  `rows === null` means NO attendance source, which stays null rather than
+ *  reading as a confident 0. Shared by Academia and Student Portal data. */
+export function attendanceStats(rows: AttendanceRow[] | null): {
+  avgAttendance: number | null;
+  belowThreshold: number | null;
+} {
+  const conducted = (rows ?? []).filter((r) => r.hoursConducted > 0);
+  return {
+    avgAttendance: conducted.length
+      ? conducted.reduce((s, r) => s + r.attendancePct, 0) / conducted.length
+      : null,
+    belowThreshold: rows ? conducted.filter((r) => r.attendancePct < ATTENDANCE_THRESHOLD).length : null,
+  };
+}
 
 export type DashboardData = {
   student: StudentInfo;
@@ -117,13 +133,7 @@ export function composeDashboard(
   // Attendance stats over courses that have actually met. With no source at all
   // these stay null rather than reading as a confident 0 — "nothing below 75%"
   // and "we can't see your attendance" are different claims.
-  const conducted = (attendanceData?.rows ?? []).filter((r) => r.hoursConducted > 0);
-  const avgAttendance = conducted.length
-    ? conducted.reduce((s, r) => s + r.attendancePct, 0) / conducted.length
-    : null;
-  const belowThreshold = attendanceData
-    ? conducted.filter((r) => r.attendancePct < ATTENDANCE_THRESHOLD).length
-    : null;
+  const { avgAttendance, belowThreshold } = attendanceStats(attendanceData?.rows ?? null);
 
   // Prefer the richer student record (attendance page carries specialization).
   const student = attendanceData?.student.specialization

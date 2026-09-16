@@ -5,7 +5,7 @@ Quick-context primer for picking this back up. Full detail: `ROADMAP.md`
 
 ## READ THIS FIRST — Student Portal work in progress (Sept 2026)
 
-**Branch: `claude/login-password-issue-nqxvgx`.** Not merged to `master`.
+**Branch: `portal-migration`** (pushed; not merged to `master`).
 
 SRM removed attendance + internal marks from Academia and moved them to the
 **SRM Student Portal** (`sp.srmist.edu.in`), a separate Java webapp. Grid is
@@ -30,37 +30,39 @@ webdriver`). Getting a headless script past that is bypassing bot protection,
 which is this project's hard line. The session is captured from a real human
 browser login and replayed; see `lib/portal/client.ts`.
 
-### Built so far
-- `lib/portal/client.ts` — report endpoints + `fetchReport()`, reproducing the
-  captured requests exactly. 19 checks, `verify-portal-client.ts`.
-- `lib/portal/parse.ts` — attendance parser. Columns resolved by HEADER LABEL,
-  not position. Emits Grid's existing `AttendanceRow`, so `planAttendance()`
-  and the attendance cards work unchanged. 45 checks,
-  `verify-portal-attendance.ts`.
-- `lib/portal/inspect.ts` + `scripts/capture-portal.ts` +
-  `scripts/inspect-capture.ts` — masked capture forensics, so a real response
-  can be shared without leaking name/reg-number/marks.
+### Built — end to end (Sept 16 2026)
+- **Parsers, all confirmed against REAL captures** (`scripts/.capture-*.html`,
+  gitignored): attendance (7 courses, arithmetic consistent), internal-marks
+  summary (lists ONLY courses whose teacher has uploaded marks — the rest are
+  "Not uploaded yet", never 0), and the per-test breakdown
+  `studentInternalMarkDetailsInner.jsp` (body `iden=1&hdnSubjectId=&status=`,
+  ids taken from each row's `funViewComponentWiseMarks(...)` onclick).
+- **Connect flow, `/portal`** (nav: "Student Portal"). User signs in on the real
+  portal, copies the attendance request as cURL, pastes it. `extractPortalCookies()`
+  keeps ONLY JSESSIONID + TS…; `connectPortalAction` saves them only after a live
+  `loadPortal()` succeeds. Stored encrypted in its own httpOnly cookie
+  `grid_portal` (`lib/portal/session-cookie.ts`, same crypto as Academia). Logout
+  clears both cookies.
+- **Pages:** Attendance / Marks / GPA / Courses prefer portal data, fall back to
+  Academia's copy. Attendance works with the portal alone; Marks/GPA/Courses
+  still need the Academia timetable for registered courses + credits.
+- **Expiry detection, confirmed live:** a dead session is NOT a redirect — the
+  portal returns HTTP 200 with a 466-byte "Please wait login screen is
+  loading..." page posting to `loginManager/youLogin.jsp`. `looksLoggedOut()`
+  in `lib/portal/load.ts` keys on that.
+- Tests: `verify-portal-load.ts` (extraction + ok/expired/error, real captures
+  replayed), `verify-portal-marks.ts`, `verify-portal-client.ts`.
 
-### Next steps (in order)
-1. **Verify the attendance parser against a real capture.** The fixture was
-   reconstructed from a *rendered screenshot*, so the source markup is still
-   unconfirmed (hence the header-based column mapping). Run:
-   `npx tsx scripts/verify-portal-capture.ts scripts/.capture-attendance.html`
-   To produce that file, replay the attendance cURL from DevTools with
-   `-o scripts\.capture-attendance.html` while logged into the portal.
-2. **Write the internal-marks parser.** Same recipe, `iden=13`. Capture the
-   response first — do NOT invent its shape.
-3. **Decide how a portal session reaches Grid.** Because login can't be
-   automated, the user has to hand over the two cookies somehow (a "Connect
-   Student Portal" paste-your-cookie flow?). Unresolved design question.
-4. **UNVERIFIED RISK:** whether the F5/WAF session survives replay from a
-   server IP (Vercel) rather than the browser that logged in. If it's pinned
-   to client IP/User-Agent, server-side replay fails. Test before building on
-   it.
-
-**This environment cannot reach `srmist.edu.in`** (egress is allowlisted to the
-npm registry and GitHub), which is why steps 1–2 are blocked here and need a
-session running on the student's own machine.
+### Still open
+1. **UNVERIFIED RISK:** whether the portal accepts a session replayed from
+   Vercel's IP instead of the browser that logged in. Only a deployed test
+   answers this. If it fails there, `/portal` will say "rejected/expired" even
+   for a fresh paste.
+2. **Portal session lifetime is unknown** (Tomcat default is 30 min idle). If it
+   is that short, users re-paste often; a bookmarklet can't help because
+   JSESSIONID is httpOnly.
+3. The Academia timetable is still required for Marks/GPA. If Academia drops
+   the timetable too, the portal's course list would need to replace it.
 
 ## What got built (most recent session)
 

@@ -2,10 +2,11 @@ import { StatTile } from "@/components/panel";
 import { CoursesTable } from "@/components/courses-table";
 import { NotConnected } from "@/components/not-connected";
 import { getDashboard } from "@/lib/academia/dashboard";
+import { getPortal } from "@/lib/portal/data";
 import { buildCourseRows, summarizeCourses } from "@/lib/academia/courses-table";
 
 export default async function CoursesPage() {
-  const result = await getDashboard();
+  const [result, portal] = await Promise.all([getDashboard(), getPortal()]);
 
   if (!result.ok) {
     return <NotConnected reason={result.reason} message={result.message} />;
@@ -14,7 +15,8 @@ export default async function CoursesPage() {
   const { timetable, attendance } = result.data;
   // Courses stand on their own; the attendance column just goes blank when
   // there's no source for it.
-  const rows = buildCourseRows(timetable.courses, attendance?.rows ?? []);
+  const attendanceRows = portal.state === "ok" ? portal.attendance.rows : (attendance?.rows ?? []);
+  const rows = buildCourseRows(timetable.courses, attendanceRows);
   const summary = summarizeCourses(rows);
 
   return (

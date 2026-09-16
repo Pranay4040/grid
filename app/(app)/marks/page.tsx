@@ -2,24 +2,24 @@ import { MarksTable } from "@/components/marks-table";
 import { NotConnected } from "@/components/not-connected";
 import { AttendanceUnavailable } from "@/components/attendance-unavailable";
 import { getDashboard } from "@/lib/academia/dashboard";
+import { getPortal } from "@/lib/portal/data";
 import { buildMarksRows } from "@/lib/academia/marks-table";
 
 export default async function MarksPage() {
-  const result = await getDashboard();
+  const [result, portal] = await Promise.all([getDashboard(), getPortal()]);
 
+  // Registered courses (and credits) still come from the Academia timetable.
   if (!result.ok) {
     return <NotConnected reason={result.reason} message={result.message} />;
   }
 
-  const { timetable, attendance, attendanceIssue } = result.data;
-  // Internal marks were only ever scraped off the attendance page, so they
-  // left Academia with it. An empty table here would read as "no assessments
-  // held yet", which is a different and wrong claim.
-  if (!attendance) {
-    return <AttendanceUnavailable what="Marks" issue={attendanceIssue} />;
+  const { timetable, attendance } = result.data;
+  // Student Portal first. With no marks source at all, an empty table would
+  // read as "nothing uploaded yet", which is a different and wrong claim.
+  const marks = portal.state === "ok" ? portal.marks : attendance?.marks;
+  if (!marks) {
+    return <AttendanceUnavailable what="Marks" portal={portal} />;
   }
 
-  const rows = buildMarksRows(timetable.courses, attendance.marks);
-
-  return <MarksTable rows={rows} />;
+  return <MarksTable rows={buildMarksRows(timetable.courses, marks)} />;
 }
