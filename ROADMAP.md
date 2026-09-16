@@ -237,11 +237,10 @@ Living checklist across every part of the app. Checked items are shipped on
       scroll), normal document flow below 1024px. Hamburger menu with a
       full focus trap, body-scroll lock, and `inert` when closed. Full
       motion system (page-load choreography, scroll-reveal on the product
-      preview, `prefers-reduced-motion` support). Not yet wired into the
-      app's actual entry flow — `/` still goes straight to the authenticated
-      dashboard (or `<NotConnected>`) regardless of login state; deciding
-      how unauthenticated visitors reach `/welcome` vs. `/login` is a
-      follow-up.
+      preview, `prefers-reduced-motion` support). Wired into the entry flow:
+      `proxy.ts` redirects `/` to `/welcome` only when no session cookie
+      exists; returning users with a bad/expired cookie still see
+      `<NotConnected>`.
 
 ## Auth
 
