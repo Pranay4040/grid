@@ -6,6 +6,7 @@
  */
 import {
   REPORTS,
+  fetchMarkComponents,
   fetchReport,
   hasRequiredCookies,
   parseCookieHeader,
@@ -70,6 +71,7 @@ globalThis.fetch = async (url: string, init: RequestInit) => {
 
 async function main() {
   const res = await fetchReport(session, REPORTS.attendance);
+  await fetchMarkComponents(session, "42782", "2");
   globalThis.fetch = realFetch;
 
   const call = calls[0];

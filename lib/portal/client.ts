@@ -17,8 +17,9 @@
  *     balancer affinity suffix) AND a `TS…` cookie (an F5 BIG-IP ASM / WAF
  *     cookie). Replay needs BOTH — the F5 cookie is not optional.
  *
- * WHAT'S NOT YET KNOWN (needs a captured RESPONSE, see scripts/inspect-capture):
- *   - The response body shape, so there is deliberately NO parser here yet.
+ * Response parsing lives in ./parse.ts, written against real captures.
+ *
+ * WHAT'S NOT YET KNOWN:
  *   - Whether the F5 session survives replay from a different IP/User-Agent
  *     than the browser that logged in. If the WAF pins the session to the
  *     client, replaying from Vercel's servers may be rejected — the same
