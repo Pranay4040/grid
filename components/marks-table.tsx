@@ -10,7 +10,7 @@ function StatusPill({ status }: { status: MarksRow["status"] }) {
     <span
       className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${cls}`}
     >
-      {status === "graded" ? "Graded" : "Not graded yet"}
+      {status === "graded" ? "Graded" : "Not uploaded yet"}
     </span>
   );
 }
